@@ -1,0 +1,23 @@
+#+SETUPFILE: setup.org
+
+* The morphogen Library of Babel
+
+This file contains shared and configurable code templates for various
+parts of this project. Templates using variables are wrapped in a
+simple Elisp form, but you can also define verbatim templates if vars
+aren't needed...
+
+** Example template with variables
+#+NAME: lob-morphogen-greetings
+#+BEGIN_SRC emacs-lisp :var msg=""
+  (replace-regexp-in-string
+   "~~msg~~" msg
+   "(defn show-greetings
+     [] (println \"~~msg~~\"))")
+#+END_SRC
+
+** Example verbatim template
+#+NAME: lob-morphogen-verbatim
+#+BEGIN_SRC clojure
+  (* 12345679 7.2)
+#+END_SRC

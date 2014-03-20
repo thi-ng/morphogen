@@ -1,0 +1,152 @@
+#+SETUPFILE: "setup.org"
+
+* Test trees
+
+#+BEGIN_SRC clojure :noweb-ref require-mg
+  (:require
+   [thi.ng.morphogen.core :as mg]
+   [thi.ng.geom.core :as g :refer [vec3]]
+   [thi.ng.geom.aabb :as a])
+  (:import
+   [thi.ng.morphogen.core BoxNode])
+#+END_SRC
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex01.clj :noweb yes :mkdirp yes :padline no
+  (ns ex01
+    <<require-mg>>)
+
+  (def seed (BoxNode. (g/vertices (a/aabb 1)) nil 0))
+
+  (def tc
+    {:op :sd-alt
+     :args {:inset 0.4 :dir :y}
+     :out [{:op :sd-alt
+	    :args {:inset 0.05 :dir :y}
+	    :out [{:op :sd :args {:cols 3} :out [{} nil {}]} {} {} {} nil]}
+	   {:op :sd-alt
+	    :args {:inset 0.05 :dir :y}
+	    :out [{} {:op :sd :args {:cols 3} :out [{} nil {}]} {} {} nil]}
+	   {:op :sd-alt
+	    :args {:inset 0.05 :dir :y}
+	    :out [{} {} {:op :sd :args {:slices 3} :out [{} nil {}]} {} nil]}
+	   {:op :sd-alt
+	    :args {:inset 0.05 :dir :y}
+	    :out [{} {} {} {:op :sd :args {:slices 3} :out [{} nil {}]} nil]}
+	   nil]})
+
+  (def t
+    {:op :sd
+     :args {:rows 3}
+     :out [tc
+	   {:op :sd
+	    :args {:rows 3}
+	    :out [{}
+		  {:op :sd :args {:cols 3} :out [nil {} nil]}
+		  {}]}
+	   tc]})
+
+  (mg/save-mesh seed t 100)
+#+END_SRC
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex02.clj :noweb yes :mkdirp yes :padline no
+  (ns ex02
+    <<require-mg>>)
+
+  (defn make-stripes
+    ([n] (make-stripes even? n))
+    ([pred n]
+       {:op :sd
+	:args {:cols n}
+	:out (mapv #(if (pred %) {}) (range n))}))
+
+  (defn stripes*
+    [pred n]
+    (loop [acc (make-stripes pred n) i (if (= pred even?) 1 0)]
+      (if (< i n)
+	(recur
+	 (assoc-in
+	  acc [:out i]
+	  {:op :sd
+	   :args {:rows 3 :slices 3}
+	   :out [nil nil nil nil {} nil nil nil nil]})
+	 (+ i 2))
+	acc)))
+
+  (def t
+    (let [se (stripes* even? 9)
+	  so (stripes* odd? 9)]
+      {:op :sd
+       :args {:cols 3 :slices 3}
+       :out [se so se se nil se se so se]}))
+
+  (def seed (BoxNode. (g/vertices (a/aabb [1 0.2 1])) nil 0))
+
+  (mg/save-mesh seed t 100)
+#+END_SRC
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
+  (ns ex03
+    <<require-mg>>)
+
+  (def apply-recursive
+    [t]
+    (assoc t :out (mapv #(if % t) (:out t))))
+
+  (def t (/ m/PI 6))
+  (defn rot-around-p [p q t] (g/+ q (g/rotate-y (g/- p q) t)))
+
+  (def seed (BoxNode. (mapv g/vec3 [[0.25 0 0] [0 0 1] [1 0 1] [0.75 0 0] [0.35 0.25 0] [0.1 0.25 1] [0.9 0.25 1] [0.65 0.25 0]]) nil 0))
+
+  ;; hex flat
+  (def seed (BoxNode. (mapv vec3 [[-0.5 -0.866025 0] [-0.5 -0.866025 1] [0.5 -0.866025 1] [0.5 -0.866025 0] [-0.375 -0.649519 0] [-0.375 -0.649519 1] [0.375 -0.649519 1] [0.375 -0.649519 0]]) nil 0))
+
+  ;; hex sphere
+  (def seed (BoxNode. (mapv vec3 [[-0.5 -0.866025 0] [-0.38453 -0.666025 0.25] [0.38453 -0.666025 0.25] [0.5 -0.866025 0]
+			       [-0.38453 -0.666025 0.0] [-0.26906 -0.466025 0.25] [0.26906 -0.466025 0.25] [0.38453 -0.666025 0.0]]) nil 0))
+
+  ;; octagon
+  (def seed (BoxNode. (mapv vec3 [[-0.38268 -0.923879 0.0] [-0.34126 -0.823879 0.25] [0.34126 -0.823879 0.25] [0.38268 -0.923879 0.0]
+			       [-0.29984 -0.723879 0.0] [-0.25842 -0.623879 0.25] [0.25842 -0.623879 0.25] [0.29984 -0.723879 0.0]]) nil 0))
+#+END_SRC
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex04.clj :noweb yes :mkdirp yes :padline no
+  (ns ex04
+    <<require-mg>>)
+
+  (def t
+    {:op :refl,
+     :args {:dir :s},
+     :out
+     [{:op :refl,
+       :args {:dir :e},
+       :out
+       [{:op :refl,
+	 :args {:dir :w},
+	 :out
+	 [{}
+	  {:op :refl, :args {:dir :w},
+	   :out
+	   [{} {}]}]}
+	{:op :refl, :args {:dir :e},
+	 :out
+	 [{}
+	  {:op :refl :args {:dir :s}
+	   :out
+	   [{:op :refl :args {:dir :e} :out [{} {}]}
+	    {:op :refl :args {:dir :w} :out [{} {}]}]}]}]}
+      {:op :refl,
+       :args {:dir :e},
+       :out
+       [{:op :refl,
+	 :args {:dir :w},
+	 :out [{} {:op :refl, :args {:dir :w}, :out [{} {}]}]}
+	{:op :refl,
+	 :args {:dir :e},
+	 :out
+	 [{}
+	  {:op :refl,
+	   :args {:dir :n},
+	   :out [{} {:op :refl, :args {:dir :w}, :out [{} {}]}]}]}]}]})
+
+  (mg/save-mesh (BoxNode. (mg/sphere-seg 6 0.25 0.1 0.2) nil 0) t 100)
+#+END_SRC

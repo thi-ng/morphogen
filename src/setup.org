@@ -1,0 +1,11 @@
+#+SEQ_TODO:       TODO(t) INPROGRESS(i) WAITING(w@) | DONE(d) CANCELED(c@)
+#+TAGS:           write(w) fix(f) verify(v) noexport(n) template(t) usetemplate(u)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+AUTHOR:         Karsten Schmidt
+#+EMAIL:          k@thi.ng
+#+LANGUAGE:       en
+#+OPTIONS:        toc:3 h:4 html-postamble:auto html-preamble:t tex:t
+#+HTML_CONTAINER: div
+#+HTML_DOCTYPE:   <!DOCTYPE html5>
+#+HTML_HEAD:      <link href="http://fonts.googleapis.com/css?family=Droid+Sans:400,700" rel="stylesheet" type="text/css">
+#+HTML_HEAD:      <link href="css/main.css" rel="stylesheet" type="text/css" />

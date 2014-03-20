@@ -1,0 +1,232 @@
+#+SETUPFILE: "setup.org"
+#+TITLE:          thi.ng/morphogen
+
+* About the project
+** Injected properties                                             :noexport:
+#+BEGIN_SRC clojure :exports none :noweb-ref version
+0.1.0-SNAPSHOT
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb-ref project-url
+https://github.com/thi-ng/morphogen
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb-ref gen-source-path
+target/classes
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb-ref gen-test-path
+target/test-classes
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb yes :noweb-ref cljs-artefact-path
+target/morphogen-<<version>>.js
+#+END_SRC
+
+** TODO Overview
+
+3D form evolution through treebased transformations
+
+** Status
+
+ALPHA quality, work in progress
+
+** TODO Example usage
+
+#+BEGIN_SRC clojure
+  (require 'thi.ng.morphogen.core)
+
+  ;; TODO some magic
+#+END_SRC
+
+** License
+
+This project is open source and licensed under the [[http://www.apache.org/licenses/LICENSE-2.0][Apache Software License 2.0]].
+
+** Dependencies
+*** Runtime
+**** [[https://github.com/clojure/clojure][Clojure]]
+#+BEGIN_SRC clojure :noweb-ref dep-clj
+[org.clojure/clojure "1.6.0-RC1"]
+#+END_SRC
+**** [[https://github.com/clojure/clojurescript][ClojureScript]]
+#+BEGIN_SRC clojure :noweb-ref dep-cljs
+[org.clojure/clojurescript "0.0-2156"]
+#+END_SRC
+**** [[https://github.com/thi-ng/geom][thi.ng/geom]]
+#+BEGIN_SRC clojure :noweb-ref dep-geom
+[thi.ng/geom "0.2.1-SNAPSHOT"]
+#+END_SRC
+
+*** Development
+**** [[https://github.com/cemerick/austin][Austin]]
+#+BEGIN_SRC clojure :noweb-ref dep-austin
+[com.cemerick/austin "0.1.4"]
+#+END_SRC
+**** [[https://github.com/lynaghk/cljx][Cljx]]
+#+BEGIN_SRC clojure :noweb-ref dep-cljx
+[com.keminglabs/cljx "0.3.2"]
+#+END_SRC
+**** [[https://github.com/hugoduncan/criterium][Criterium]]
+#+BEGIN_SRC clojure :noweb-ref dep-criterium
+[criterium "0.4.1"]
+#+END_SRC
+**** [[https://github.com/cemerick/clojurescript.test][clojurescript.test]]
+#+BEGIN_SRC clojure :noweb-ref dep-cljs-test
+[com.cemerick/clojurescript.test "0.2.2"]
+#+END_SRC
+**** [[https://github.com/emezeske/lein-cljsbuild][Cljsbuild]]
+#+BEGIN_SRC clojure :noweb-ref dep-cljsbuild
+[lein-cljsbuild "1.0.2"]
+#+END_SRC
+
+** Contributors
+
+| *Name*          | *Role*                          | *Website*                  |
+|-----------------+---------------------------------+----------------------------|
+| [[k@thi.ng][Karsten Schmidt]] | initiator & principal developer | http://postspectacular.com |
+|                 |                                 | http://thi.ng              |
+
+** Release history
+
+| *Version* | *Released* | *Description*      | *Lein coordinates*           | *Tagged Github URL* |
+|-----------+------------+--------------------+------------------------------+---------------------|
+|     0.1.0 | pending    | 1st public release | =[thi.ng/morphogen "0.1.0"]= |                     |
+
+** Leiningen coordinates
+#+BEGIN_SRC clojure :noweb yes :noweb-ref lein-coords
+  [thi.ng/morphogen <<version>>]
+#+END_SRC
+
+** Building this project
+
+This project is written in a literate programming format and requires
+[[https://www.gnu.org/software/emacs/][Emacs]] & [[http://orgmode.org][Org-mode]] to generate usable source code in [[https://github.com/lynaghk/cljx][CLJX]] form. Assuming
+both tools are installed, the easiest way to generate a working
+project is via command line (make sure =emacs= is on your path or else
+edit its path in =tangle.sh=):
+
+#+BEGIN_SRC bash
+  git clone https://github.com/thi-ng/morphogen.git
+  cd morphogen
+  ./tangle.sh src/*.org test/*.org
+#+END_SRC
+
+Tangling is the process of extracting & combining source blocks from
+=.org= files into an actual working project/source tree. This project
+currently consists of 26 namespaces and 6500+ lines of code, the
+tangling of which takes approx. 20 secs.
+
+Once tangling is complete, you can =cd= into the generated project
+directory (=babel=) and then use =lein= as usual.
+
+*** Testing
+
+The =project.clj= file defines an alias to trigger a complete build &
+tests for both CLJ & CLJS versions.
+
+#+BEGIN_SRC bash
+  cd babel
+  lein cleantest
+#+END_SRC
+
+To build the Clojurescript version simply run =lein cljsbuild test=
+from the same directory. A small HTML harness for the resulting JS
+file is also located in that folder (=babel/index.html=), allowing for
+further experimentation in the browser.
+
+*** Working with the REPL
+
+Since the generated =project.clj= (see below) includes REPL hooks for
+CLJX, editing files in Org-mode, then re-loading & testing changes is
+quite trivial. Simply launch a REPL (via =lein= or Emacs) as usual.
+Everytime you've made changes to an =.org= file, re-tangle it from
+Emacs (=C-c C-v t=) or =tangle.sh=, then reload the namespace in the
+REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
+
+** Leiningen project file                                          :noexport:
+#+BEGIN_SRC clojure :tangle ../babel/project.clj :noweb yes :mkdirp yes :padline no
+  (defproject thi.ng/morphogen "<<version>>"
+    :description "3d form evolution through treebased transformations"
+    :url "<<project-url>>"
+    :license {:name "Apache Software License 2.0"
+	      :url "http://www.apache.org/licenses/LICENSE-2.0"}
+    :dependencies [<<dep-clj>>
+		   <<dep-geom>>]
+
+    :source-paths ["src/cljx"]
+    :test-paths ["<<gen-test-path>>"]
+
+    :profiles {:dev {:dependencies [<<dep-cljs>>
+				    <<dep-criterium>>]
+		     :plugins [<<dep-cljx>>
+			       <<dep-cljsbuild>>
+			       <<dep-cljs-test>>
+			       <<dep-austin>>]
+		     :hooks [cljx.hooks]
+		     :aliases {"cleantest" ["do" "clean," "test," "cljsbuild" "test"]}}}
+
+    :cljx {:builds [{:source-paths ["src/cljx"]
+		     :output-path "<<gen-source-path>>"
+		     :rules :clj}
+		    {:source-paths ["src/cljx"]
+		     :output-path "<<gen-source-path>>"
+		     :rules :cljs}
+		    {:source-paths ["test/cljx"]
+		     :output-path "<<gen-test-path>>"
+		     :rules :clj}
+		    {:source-paths ["test/cljx"]
+		     :output-path "<<gen-test-path>>"
+		     :rules :cljs}]}
+
+    :cljsbuild {:builds [{:source-paths ["<<gen-source-path>>" "<<gen-test-path>>"]
+			  :id "simple"
+			  :compiler {:output-to "<<cljs-artefact-path>>"
+				     :optimizations :whitespace
+				     :pretty-print true}}]
+		:test-commands {"unit-tests" ["phantomjs" :runner "<<cljs-artefact-path>>"]}})
+#+END_SRC
+
+** ClojureScript HTML harness                                      :noexport:
+#+BEGIN_SRC html :tangle ../babel/index.html :noweb yes :mkdirp yes :padline no
+  <!DOCTYPE html5>
+  <html lang="en">
+    <head>
+      <title><<lein-coords>> test</title>
+    </head>
+    <body>
+      <script type="text/javascript" src="<<cljs-artefact-path>>"></script>
+    </body>
+  </html>
+#+END_SRC
+** Accessing library version during runtime
+
+The autogenerated namespace =thi.ng.morphogen.version= contains a single
+symbol =version= holding the version string defined above:
+
+#+BEGIN_SRC clojure :noweb yes
+  (use '[thi.ng.morphogen.version])
+
+  (prn version)
+  ; "<<version>>"
+#+END_SRC
+
+*** Version namespace                                              :noexport:
+
+#+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/version.cljx :noweb yes :mkdirp yes :padline no :exports none
+  (ns thi.ng.morphogen.version)
+
+  (def ^:const version "<<version>>")
+#+END_SRC
+
+* Modules
+
+*** Note for Github users
+
+The following sections contain links to project modules, but are not
+visibile when reading this file on Github. Please navigate to the
+source files via the normal [[https://github.com/thi.ng/morphogen/tree/master/][GH repo browser]].
+
+** Core API
+
+#+INCLUDE: "core.org" :minlevel 2
+
+* Tests
+
+#+INCLUDE: "../test/core.org" :minlevel 2
