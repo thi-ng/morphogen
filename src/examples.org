@@ -15,37 +15,22 @@
   (ns ex01
     <<require-mg>>)
 
-  (def seed (BoxNode. (g/vertices (a/aabb 1)) nil 0))
-
-  (def tc
-    {:op :sd-alt
-     :args {:inset 0.4 :dir :y}
-     :out [{:op :sd-alt
-	    :args {:inset 0.05 :dir :y}
-	    :out [{:op :sd :args {:cols 3} :out [{} nil {}]} {} {} {} nil]}
-	   {:op :sd-alt
-	    :args {:inset 0.05 :dir :y}
-	    :out [{} {:op :sd :args {:cols 3} :out [{} nil {}]} {} {} nil]}
-	   {:op :sd-alt
-	    :args {:inset 0.05 :dir :y}
-	    :out [{} {} {:op :sd :args {:slices 3} :out [{} nil {}]} {} nil]}
-	   {:op :sd-alt
-	    :args {:inset 0.05 :dir :y}
-	    :out [{} {} {} {:op :sd :args {:slices 3} :out [{} nil {}]} nil]}
-	   nil]})
-
   (def t
-    {:op :sd
-     :args {:rows 3}
-     :out [tc
-	   {:op :sd
-	    :args {:rows 3}
-	    :out [{}
-		  {:op :sd :args {:cols 3} :out [nil {} nil]}
-		  {}]}
-	   tc]})
+    (let [branch (fn [[dir lpos]]
+		   (mg/subdiv-inset
+		    :dir :y :inset 0.05
+		    :out {lpos (mg/subdiv dir 3 :out {1 nil}) 4 nil}))
+	  module (mg/subdiv-inset
+		  :dir :y :inset 0.4
+		  :out (mapv branch [[:cols 0] [:cols 1] [:slices 2] [:slices 3]]))]
+      (mg/subdiv
+       :rows 3
+       :out [module
+	     (mg/subdiv
+	      :rows 3 :out {1 (mg/subdiv :cols 3 :out [nil {} nil])})
+	     module])))
 
-  (mg/save-mesh seed t 100)
+  (mg/save-mesh (mg/seed (a/aabb 1 0.5 1)) t)
 #+END_SRC
 
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex02.clj :noweb yes :mkdirp yes :padline no
@@ -55,9 +40,7 @@
   (defn make-stripes
     ([n] (make-stripes even? n))
     ([pred n]
-       {:op :sd
-	:args {:cols n}
-	:out (mapv #(if (pred %) {}) (range n))}))
+       (mg/subdiv :cols n :out (mapv #(if (pred %) {}) (range n)))))
 
   (defn stripes*
     [pred n]
@@ -66,25 +49,20 @@
 	(recur
 	 (assoc-in
 	  acc [:out i]
-	  {:op :sd
-	   :args {:rows 3 :slices 3}
-	   :out [nil nil nil nil {} nil nil nil nil]})
+	  (mg/subdiv
+	   :rows 3 :slices 3 :out {4 {}} :empty? true))
 	 (+ i 2))
 	acc)))
 
   (def t
     (let [se (stripes* even? 9)
-	  so (stripes* odd? 9)]
-      {:op :sd
-       :args {:cols 3 :slices 3}
-       :out [se so se se nil se se so se]}))
+	  so (mg/subdiv :rows 2 :out [(stripes* odd? 9)])]
+      (mg/subdiv :cols 3 :slices 3 :out [se so se se nil se se so se])))
 
-  (def seed (BoxNode. (g/vertices (a/aabb [1 0.2 1])) nil 0))
-
-  (mg/save-mesh seed t 100)
+  (mg/save-mesh (mg/seed (a/aabb 1 0.2 1)) t)
 #+END_SRC
 
-#+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
+#+BEGIN_SRC clojure
   (ns ex03
     <<require-mg>>)
 
@@ -109,8 +87,8 @@
 			       [-0.29984 -0.723879 0.0] [-0.25842 -0.623879 0.25] [0.25842 -0.623879 0.25] [0.29984 -0.723879 0.0]]) nil 0))
 #+END_SRC
 
-#+BEGIN_SRC clojure :tangle ../babel/examples/ex04.clj :noweb yes :mkdirp yes :padline no
-  (ns ex04
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
+  (ns ex03
     <<require-mg>>)
 
   (def t
@@ -148,5 +126,6 @@
 	   :args {:dir :n},
 	   :out [{} {:op :refl, :args {:dir :w}, :out [{} {}]}]}]}]}]})
 
-  (mg/save-mesh (BoxNode. (mg/sphere-seg 6 0.25 0.1 0.2) nil 0) t 100)
+  (mg/save-mesh (mg/seed (mg/sphere-seg 6 0.25 0.1 0.2)) t)
 #+END_SRC
+
