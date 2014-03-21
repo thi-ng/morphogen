@@ -73,6 +73,15 @@ REPL, e.g. via =(load-file "examples/ex03.clj")=...
 
 ** Hexagon hemisphere
 
+[[../assets/img/20140321-morphogen-1300spp-agfa-optima200.jpg]]
+
+The following code generates the mesh shown in the image above: A
+sphere segment is used a seed shape to create a number of hexagons,
+which arrange themselves in a spherical constellation. The only
+operator used here is =reflection=. Since the operator tree is context
+free & distinct from any actual node hierarchy, we can encode various
+sub-transformations using simple functions:
+
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
   (ns ex03
     <<require-mg>>)
@@ -100,10 +109,9 @@ REPL, e.g. via =(load-file "examples/ex03.clj")=...
 
 ** TODO different node types
 
-#+BEGIN_SRC clojure
-  (ns ex04
-    <<require-mg>>)
+Sandbox...
 
+#+BEGIN_SRC clojure
   (def apply-recursive
     [t]
     (assoc t :out (mapv #(if % t) (:out t))))
