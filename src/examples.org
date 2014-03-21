@@ -75,35 +75,39 @@ REPL, e.g. via =(load-file "examples/ex03.clj")=...
 
 [[../assets/img/20140321-morphogen-1300spp-agfa-optima200.jpg]]
 
-The following code generates the mesh shown in the image above: A
-sphere segment is used a seed shape to create a number of hexagons,
-which arrange themselves in a spherical constellation. The only
-operator used here is =reflection=. Since the operator tree is context
-free & distinct from any actual node hierarchy, we can encode various
+The following short code is all what's needed to generate the mesh
+shown in the image above: A sphere segment (generated with
+=sphere-seg=) is used as seed shape to create a number of hexagons,
+which due to the chosen angles of the seed shape automatically arrange
+themselves in a spherical constellation. The =reflection= operator is
+the only one used here. Since the operator tree is context free &
+distinct from any actual node hierarchy, we can encode various
 sub-transformations using simple functions:
 
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
   (ns ex03
     <<require-mg>>)
-
+  
   (defn apply-recursive1
+    "Recursively injects tree into itself n times. Each time original
+    tree given is injected at index `id` of the `:out` child node vec"
     [tree n id]
     (loop [t' tree, path [:out id], n (dec n)]
       (if (pos? n)
-	(recur (assoc-in t' path tree) (into path [:out id]) (dec n))
-	t')))
-
+        (recur (assoc-in t' path tree) (into path [:out id]) (dec n))
+        t')))
+  
   (def t
+    "Hexagon arrangement as sequence of nested reflections."
     (let [ring (apply-recursive1 (mg/reflect :dir :e) 5 1)
-	  refl-ring (mg/reflect :dir :n :out [{} ring])
-	  path #(interleave (repeat :out) %)
-	  inject #(-> ring
-		      (assoc-in (path [1 1 0]) %)
-		      (assoc-in (path [1 1 1 1 0]) %))
-	  splice (mg/reflect :dir :s :out [{} (inject refl-ring)])]
+          refl-ring (mg/reflect :dir :n :out [{} ring])
+          path #(interleave (repeat :out) %)
+          inject #(-> ring
+                      (assoc-in (path [1 1 0]) %)
+                      (assoc-in (path [1 1 1 1 0]) %))
+          splice (mg/reflect :dir :s :out [{} (inject refl-ring)])]
       (mg/reflect :dir :s :out [(inject splice) (inject refl-ring)])))
-
-  ;; (mg/save-mesh (mg/seed (mg/sphere-seg 6 0.25 0.1 0.2)) t)
+  
   (mg/save-mesh (mg/seed (mg/sphere-seg 6 0.25 0.0955 0.2)) t)
 #+END_SRC
 
