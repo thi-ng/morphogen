@@ -2,22 +2,6 @@
 #+TITLE:          thi.ng/morphogen
 
 * About the project
-** Injected properties                                             :noexport:
-#+BEGIN_SRC clojure :exports none :noweb-ref version
-0.1.0-SNAPSHOT
-#+END_SRC
-#+BEGIN_SRC clojure :exports none :noweb-ref project-url
-https://github.com/thi-ng/morphogen
-#+END_SRC
-#+BEGIN_SRC clojure :exports none :noweb-ref gen-source-path
-target/classes
-#+END_SRC
-#+BEGIN_SRC clojure :exports none :noweb-ref gen-test-path
-target/test-classes
-#+END_SRC
-#+BEGIN_SRC clojure :exports none :noweb yes :noweb-ref cljs-artefact-path
-target/morphogen-<<version>>.js
-#+END_SRC
 
 ** Overview
 
@@ -58,7 +42,7 @@ can be found in the [[file:core.org][core namespace]] of this library.
 ** Status
 
 ALPHA quality, work in progress. This project is actively being worked
-on and will receive daily updates over the next couple of months.
+on and is likely to receive daily updates over the next couple of months.
 
 ** Example usage
 
@@ -71,6 +55,23 @@ be run from the REPL and export meshes in Stanford PLY format.
 ** License
 
 This project is open source and licensed under the [[http://www.apache.org/licenses/LICENSE-2.0][Apache Software License 2.0]].
+
+** Injected properties                                             :noexport:
+#+BEGIN_SRC clojure :exports none :noweb-ref version
+0.1.0-SNAPSHOT
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb-ref project-url
+https://github.com/thi-ng/morphogen
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb-ref gen-source-path
+target/classes
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb-ref gen-test-path
+target/test-classes
+#+END_SRC
+#+BEGIN_SRC clojure :exports none :noweb yes :noweb-ref cljs-artefact-path
+target/morphogen-<<version>>.js
+#+END_SRC
 
 ** Dependencies
 *** Runtime
