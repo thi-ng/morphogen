@@ -23,6 +23,8 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
 
 ** Extruded aluminium style module
 
+[[../assets/img/morphogen-ex01.jpg]]
+
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex01.clj :noweb yes :mkdirp yes :padline no
   (ns ex01
     <<require-mg>>)
@@ -46,6 +48,8 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
 #+END_SRC
 
 ** Stripy module (heatsink?)
+
+[[../assets/img/morphogen-ex02.jpg]]
 
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex02.clj :noweb yes :mkdirp yes :padline no
   (ns ex02
@@ -78,7 +82,7 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
 
 ** Hexagon hemisphere
 
-[[../assets/img/20140321-morphogen-1300spp-agfa-optima200.jpg]]
+[[../assets/img/morphogen-ex03.jpg]]
 
 The following short code is all what's needed to generate the mesh
 shown in the image above: A sphere segment (generated with
@@ -88,10 +92,6 @@ themselves in a spherical constellation. The entire structure is only
 using the =reflection= operator. Since the operator tree is context
 free & distinct from any actual geometry node hierarchy, we can encode
 various repetitive sub-transformations using simple functions.
-
-The example also includes a variation of the same tree applied to a
-circle lattice segment forming a flat structure instead of a
-hemisphere. Just uncomment the last line to see its result.
 
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
   (ns ex03
@@ -125,8 +125,14 @@ hemisphere. Just uncomment the last line to see its result.
   (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t)
   
   ;; apply to circle lattice segment to form flat structure
-  ;; (mg/save-mesh (mg/seed (mg/circle-lattice-seg 6 0.25 0.2)) t)
+  ;;(mg/save-mesh (mg/seed (mg/circle-lattice-seg 6 0.25 0.2)) t)
 #+END_SRC
+
+The example also includes a variation of the same tree applied to a
+circle lattice segment forming a flat structure instead of a
+hemisphere. Just uncomment the last line to see its result.
+
+[[../assets/img/morphogen-ex03-flat.jpg]]
 
 ** TODO different node types
 

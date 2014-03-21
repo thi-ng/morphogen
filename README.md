@@ -1,6 +1,6 @@
 # thi.ng/morphogen
 
-![Luxor test scene](assets/img/20140321-morphogen-1300spp-agfa-optima200.jpg)
+![Luxor test scene](assets/img/morphogen-ex03.jpg)
 
 Declarative 3D form evolution through tree-based transformations.
 
@@ -15,7 +15,7 @@ Declarative 3D form evolution through tree-based transformations.
 
 - [Overview & project details](src/index.org)
 - [Detailed implementation description](src/core.org)
-- [Examples](src/examples.org)
+- [Examples & rendered results](src/examples.org)
 
 ## License
 
