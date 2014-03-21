@@ -6,7 +6,7 @@
 
 ## Description & usage
 
-See [index.org](src/index.org)
+See [index.org](src/index.org) & [core.org](src/core.org) for update information.
 
 ## License
 
