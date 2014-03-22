@@ -4,7 +4,9 @@
 
 All examples defined below will be tangled into the =/babel/examples/=
 subfolder of this project and can be directly loaded into a running
-REPL, e.g. via =(load-file "examples/ex03.clj")=.
+REPL, e.g. via =(load-file "examples/ex03.clj")=. Loading the first
+example will take a few seconds, since the thi.ng/geom library is
+quite large, however subsequent calls will take < 1 sec...
 
 Each example generates a 3D model in Stanford PLY format, which is
 saved in this file [[../babel/p.ply]] and can then be imported into other
@@ -86,7 +88,7 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
 
 The following short code is all what's needed to generate the mesh
 shown in the image above: A sphere segment (generated with
-=sphere-seg=) is used as seed shape to create a number of hexagons,
+=sphere-lattice-seg=) is used as seed shape to create a number of hexagons,
 which due to the side angles of the seed shape automatically arrange
 themselves in a spherical constellation. The entire structure is only
 using the =reflection= operator. Since the operator tree is context
@@ -97,25 +99,13 @@ various repetitive sub-transformations using simple functions.
   (ns ex03
     <<require-mg>>)
   
-  (defn apply-recursively
-    "Recursively injects tree into itself n times. At each level, the
-    original tree given is injected at index `id` of the `:out` child
-    node vector."
-    [tree n id]
-    (loop [t' tree, path [:out id], n (dec n)]
-      (if (pos? n)
-        (recur (assoc-in t' path tree) (into path [:out id]) (dec n))
-        t')))
-  
-  (def child-path #(interleave (repeat :out) %))
-  
   (def t
     "Hexagon arrangement as sequence of nested reflections."
-    (let [ring (apply-recursively (mg/reflect :dir :e) 5 1)
+    (let [ring (mg/apply-recursively (mg/reflect :dir :e) 5 [1] 1)
           reflected-ring (mg/reflect :dir :n :out [{} ring])
           inject #(-> ring
-                      (assoc-in (child-path [1 1 0]) %)
-                      (assoc-in (child-path [1 1 1 1 0]) %))
+                      (assoc-in (mg/child-path [1 1 0]) %)
+                      (assoc-in (mg/child-path [1 1 1 1 0]) %))
           ring-start (mg/reflect :dir :s :out [{} (inject reflected-ring)])]
       (mg/reflect
        :dir :s :out [(inject ring-start)
@@ -129,11 +119,25 @@ various repetitive sub-transformations using simple functions.
 #+END_SRC
 
 The example also includes a variation of the same tree applied to a
-circle lattice segment forming a flat structure instead of a
+circle lattice segment forming a flat, planar structure instead of a
 hemisphere. Just uncomment the last line to see its result.
 
 [[../assets/img/morphogen-ex03-flat.jpg]]
 
+** Extrusions & edge scaling
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex04.clj :noweb yes :mkdirp yes :padline no
+  (ns ex04
+    <<require-mg>>)
+  
+  (mg/save-mesh
+   (mg/seed (a/aabb 1))
+   (mg/scale-edge
+    :ad :z
+    :out [(mg/scale-edge
+           :ab :y :out [(mg/reflect :dir :e :out [{} (mg/reflect :dir :e)])])]))
+
+#+END_SRC
 ** TODO different node types
 
 Sandbox/kitchen sink...
