@@ -133,15 +133,19 @@ ways:
 Node operators are responsible for transforming a geometry node to
 manipulate its points and/or produce a number of child nodes. Through
 their nested application they can produce a large number of resulting
-forms.
+forms. The operators defined here are only applicable to the =BoxNode=
+type, but as we will see they're technically trivial and can be used
+as guidance to provide similar operators for custom nodes.
 
 The following operators are currently implemented:
 
-| *Operator*        | *ID*      | *Description*                                          |
-|-------------------+-----------+--------------------------------------------------------|
-| Subdivision       | =:sd=     | regular subdivision resulting in self-similar children |
-| Inset subdivision | =:sd-ins= | subdivision through insetting along an axis            |
-| Reflection        | =:refl=   | reflection of entire node on one of its sides          |
+| *Operator*        | *ID*          | *Description*                                                              |
+|-------------------+---------------+----------------------------------------------------------------------------|
+| Subdivision       | =:sd=         | Regular subdivision resulting in self-similar children                     |
+| Inset subdivision | =:sd-inset=   | Subdivision through insetting along an axis                                |
+| Reflection        | =:reflect=    | Reflection of entire node on one of its sides                              |
+| Extrusion         | =:extrude=    | Extrusion of the node along the normal of one of its sides                 |
+| Scale edge(s)     | =:scale-edge= | Scale an edge and set its symmetric opposite (in X, Y or Z) to same length |
 
 The *ID* column states the IDs used to match operators to their
 implementation using the =operator= multimethod, described below.
@@ -236,7 +240,9 @@ implementations:
 | *Argument* | *Value description*             | *Default* |
 |------------+---------------------------------+-----------|
 | =:cols=    | number of splits along AD edge  | 1         |
+|------------+---------------------------------+-----------|
 | =:rows=    | number of splits along AE edge  | 1         |
+|------------+---------------------------------+-----------|
 | =:slices=  | number of splits along AB edges | 1         |
 
 #+BEGIN_SRC clojure :noweb-ref operators
@@ -265,8 +271,9 @@ five child nodes in the specified order:
 | *Argument* | *Value description*                                                      | *Default* |
 |------------+--------------------------------------------------------------------------+-----------|
 | =:dir=     | =:x= split from right side (as viewed so that face =[c d h g]= is front) | :y        |
-|            | =:y= from top                                                            |           |
-|            | =:z= from front                                                          |           |
+|            | =:y= from top (as viewed so that face =[e f g h]= is front)              |           |
+|            | =:z= from front (as viewed so that face =[b c g f]= is front)            |           |
+|------------+--------------------------------------------------------------------------+-----------|
 | =:inset=   | percentage to inset corner points (0.0 ... < 0.5)                        | 0.25      |
 
 #+BEGIN_SRC clojure :noweb-ref operators
@@ -274,58 +281,78 @@ five child nodes in the specified order:
     [[a b c d e f g h :as points]
      {i :inset dir :dir :or {i 0.1 dir :y}}]
     (let [ii (- 1.0 i)
-	  map-points (fn [base uv]
-		       (mapcat
-			(fn [[u v]]
-			  [(unmap-uvw points (assoc (vec3) uv [u v]))
-			   (unmap-uvw points (assoc base uv [u v]))])
-			[[i i] [i ii] [ii ii] [ii i]]))]
+          map-points (fn [base uv]
+                       (mapcat
+                        (fn [[u v]]
+                          [(unmap-uvw points (assoc (vec3) uv [u v]))
+                           (unmap-uvw points (assoc base uv [u v]))])
+                        [[i i] [i ii] [ii ii] [ii i]]))]
       (condp = dir
-	:x (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points g/V3X :yz)]
-	     [[b c d a b1 b2 a2 a1]
-	      [c1 c2 d2 d1 f g h e]
-	      [b c b2 b1 f g c2 c1]
-	      [a1 a2 d a d1 d2 h e]
-	      [b1 b2 a2 a1 c1 c2 d2 d1]])
-	:y (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points g/V3Y :xz)]
-	     [[b1 b c c1 b2 f g c2]
-	      [a a1 d1 d e a2 d2 h]
-	      [a b b1 a1 e f b2 a2]
-	      [d1 c1 c d d2 c2 g h]
-	      [a1 b1 c1 d1 a2 b2 c2 d2]])
-	:z (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points g/V3Z :xy)]
-	     [[a b c d a1 a2 d2 d1]
-	      [b1 b2 c2 c1 e f g h]
-	      [a b a2 a1 e f b2 b1]
-	      [d1 d2 c d c1 c2 g h]
-	      [a1 a2 d2 d1 b1 b2 c2 c1]]))))
-
-  (defmethod operator [BoxNode :sd-ins]
+        :x (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points g/V3X :yz)]
+             [[b c d a b1 b2 a2 a1]
+              [c1 c2 d2 d1 f g h e]
+              [b c b2 b1 f g c2 c1]
+              [a1 a2 d a d1 d2 h e]
+              [b1 b2 a2 a1 c1 c2 d2 d1]])
+        :y (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points g/V3Y :xz)]
+             [[b1 b c c1 b2 f g c2]
+              [a a1 d1 d e a2 d2 h]
+              [a b b1 a1 e f b2 a2]
+              [d1 c1 c d d2 c2 g h]
+              [a1 b1 c1 d1 a2 b2 c2 d2]])
+        :z (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points g/V3Z :xy)]
+             [[a b c d a1 a2 d2 d1]
+              [b1 b2 c2 c1 e f g h]
+              [a b a2 a1 e f b2 b1]
+              [d1 d2 c d c1 c2 g h]
+              [a1 a2 d2 d1 b1 b2 c2 c1]]))))
+  
+  (defmethod operator [BoxNode :sd-inset]
     [node {:keys [args]}]
     (let [depth (inc (depth node))]
       (->> (subdivide-inset (:points node) args)
-	   (map #(BoxNode. % node depth)))))
-
+           (map #(BoxNode. % node depth)))))
+  
 #+END_SRC
 
-*** TODO Extrusion                                                      :fix:
+*** Extrusion
+
+| *Argument* | *Value description*                   | *Default* |
+|------------+---------------------------------------+-----------|
+| =:dir=     | =:e= reflect on right plane [c d h g] | :n        |
+|            | =:w= left plane [a b f e]             |           |
+|            | =:n= top plane [e f g h]              |           |
+|            | =:s= bottom plane [a b c d]           |           |
+|            | =:f= front plane [b c g f]            |           |
+|            | =:b= back plane [a d h e]             |           |
+|------------+---------------------------------------+-----------|
+| =:len=     | Extrusion length                      | 1.0       |
 
 #+BEGIN_SRC clojure :noweb-ref operators
-  (defmethod operator [BoxNode :ext]
-    [{[a b c d e f g h] :points :as node} {{:keys [dir len]} :args}]
+  (defmethod operator [BoxNode :extrude]
+    [{[a b c d e f g h] :points :as node}
+     {{:keys [dir len] :or {dir :n len 1.0}} :args}]
     [(BoxNode.
       (condp = dir
-	:t (let [o (vec3 0 len 0)]
-	     [a b c d (g/+ e o) (g/+ f o) (g/+ g o) (g/+ h o)])
-	:b (let [o (vec3 0 len 0)]
-	     [(g/- a o) (g/- b o) (g/- c o) (g/- d o) e f g h]))
+        :e (let [o (g/* (g/normal3* c d h) len)]
+             [a b (g/+ c o) (g/+ d o) e f (g/+ g o) (g/+ h o)])
+        :w (let [o (g/* (g/normal3* a b f) len)]
+             [(g/+ a o) (g/+ b o) c d (g/+ e o) (g/+ f o) g h])
+        :n (let [o (g/* (g/normal3* e f g) len)]
+             [a b c d (g/+ e o) (g/+ f o) (g/+ g o) (g/+ h o)])
+        :s (let [o (g/* (g/normal3* a d c) len)]
+             [(g/- a o) (g/- b o) (g/- c o) (g/- d o) e f g h])
+        :f (let [o (g/* (g/normal3* b c g) len)]
+             [a (g/+ b o) (g/+ c o) d e (g/+ f o) (g/+ g o) h])
+        :b (let [o (g/* (g/normal3* c d e) len)]
+             [(g/+ a o) b c (g/+ d o) (g/+ e o) f g (g/+ h o)]))
       node (inc (depth node)))])
-
+  
 #+END_SRC
 
 *** Reflection
 
-The reflection operator simply mirrors a given box node on one of its
+The reflection operator simply mirrors a given node on one of its
 sides and returns the original node and the mirrored version.
 
 | *Argument* | *Value description*                   | *Default* |
@@ -341,36 +368,97 @@ sides and returns the original node and the mirrored version.
   (defn reflect-on-plane
     [p q n]
     (g/+ q (g/reflect (g/- q p) (g/normalize n))))
-
-  (defmethod operator [BoxNode :refl]
-    [{[a b c d e f g h] :points :as node} {{:keys [dir]} :args}]
+  
+  (defmethod operator [BoxNode :reflect]
+    [{[a b c d e f g h] :points :as node}
+     {{:keys [dir] :or {dir :n}} :args}]
     [node
      (BoxNode.
       (condp = dir
-	:e (let [n (g/normal3* c d g)]
-	     [d c (reflect-on-plane b c n) (reflect-on-plane a d n)
-	      h g (reflect-on-plane f g n) (reflect-on-plane e h n)])
-	:w (let [n (g/normal3* a b f)]
-	     [(reflect-on-plane d a n) (reflect-on-plane c b n) b a
-	      (reflect-on-plane h e n) (reflect-on-plane g f n) f e])
-	:s (let [n (g/normal3* a c b)]
-	     [(reflect-on-plane e a n) (reflect-on-plane f b n)
-	      (reflect-on-plane g c n) (reflect-on-plane h d n)
-	      a b c d])
-	:n (let [n (g/normal3* e f g)]
-	     [e f g h
-	      (reflect-on-plane a e n) (reflect-on-plane b f n)
-	      (reflect-on-plane c g n) (reflect-on-plane d h n)])
-	:f (let [n (g/normal3* b c g)]
-	     [b (reflect-on-plane a b n) (reflect-on-plane d c n) c
-	      f (reflect-on-plane e f n) (reflect-on-plane h g n) g])
-	:b (let [n (g/normal3* a e h)]
-	     [(reflect-on-plane b a n) a d (reflect-on-plane c d n)
-	      (reflect-on-plane f e n) e h (reflect-on-plane g h n)]))
+        :e (let [n (g/normal3* c d g)]
+             [d c (reflect-on-plane b c n) (reflect-on-plane a d n)
+              h g (reflect-on-plane f g n) (reflect-on-plane e h n)])
+        :w (let [n (g/normal3* a b f)]
+             [(reflect-on-plane d a n) (reflect-on-plane c b n) b a
+              (reflect-on-plane h e n) (reflect-on-plane g f n) f e])
+        :s (let [n (g/normal3* a c b)]
+             [(reflect-on-plane e a n) (reflect-on-plane f b n)
+              (reflect-on-plane g c n) (reflect-on-plane h d n)
+              a b c d])
+        :n (let [n (g/normal3* e f g)]
+             [e f g h
+              (reflect-on-plane a e n) (reflect-on-plane b f n)
+              (reflect-on-plane c g n) (reflect-on-plane d h n)])
+        :f (let [n (g/normal3* b c g)]
+             [b (reflect-on-plane a b n) (reflect-on-plane d c n) c
+              f (reflect-on-plane e f n) (reflect-on-plane h g n) g])
+        :b (let [n (g/normal3* a e h)]
+             [(reflect-on-plane b a n) a d (reflect-on-plane c d n)
+              (reflect-on-plane f e n) e h (reflect-on-plane g h n)]))
       node (inc (depth node)))])
-
+  
 #+END_SRC
 
+*** Scale edge
+
+| *Argument* | *Value description*                                      | *Default*   |
+|------------+----------------------------------------------------------+-------------|
+| =:edge=    | =:ab=, =:bc=, =:cd=, =:ad= (bottom face edges)           | =nil=       |
+|            | =:ef=, =:fg=, =:gh=, =:eh= (top face edges)              | (mandatory) |
+|            | =:ae=, =:bf=, =:cg=, =:dh= (sides)                       |             |
+|------------+----------------------------------------------------------+-------------|
+| =:sym=     | =:x= also scale edge on opposite side (along =:ad= edge) | =nil=       |
+|            | =:y= (along =:ae= edge)                                  | (mandatory) |
+|            | =:z= (along =:ab= edge)                                  |             |
+|------------+----------------------------------------------------------+-------------|
+| =:scale=   | scale factor                                             | 0.5         |
+
+#+BEGIN_SRC clojure :noweb-ref operators
+  (defmethod operator [BoxNode :scale-edge]
+    [{[a b c d e f g h] :points :as node}
+     {{:keys [edge sym scale] :or {scale 0.5}} :args}]
+    (let [s (* scale 0.5)
+          scale-if (fn [sid p q s]
+                     (if (= sid sym)
+                       [(g/mix p q s) (g/mix q p s)] [p q]))
+          scale (fn [p q s1 i j s2 k l]
+                  (let [p' (g/mix p q s), q' (g/mix q p s)
+                        dpq (g/dist p' q')
+                        [i j] (scale-if s1 i j (/ dpq (g/dist i j) 2))
+                        [k l] (scale-if s2 k l (/ dpq (g/dist k l) 2))]
+                    [p' q' i j k l]))]
+      [(BoxNode.
+        (condp = edge
+          ;; bottom
+          :ab (let [[a b c d e f] (scale a b :x c d :y e f)]
+                [a b c d e f g h])
+          :bc (let [[b c a d f g] (scale b c :z a d :y f g)]
+                [a b c d e f g h])
+          :cd (let [[c d a b g h] (scale c d :x a b :y g h)]
+                [a b c d e f g h])
+          :ad (let [[a d b c e h] (scale a d :z b c :y e h)]
+                [a b c d e f g h])
+          ;; top
+          :ef (let [[e f g h a b] (scale e f :x g h :y a b)]
+                [a b c d e f g h])
+          :fg (let [[f g e h b c] (scale f g :z e h :y b c)]
+                [a b c d e f g h])
+          :gh (let [[g h e f c d] (scale g h :x e f :y c d)]
+                [a b c d e f g h])
+          :eh (let [[e h f g a d] (scale e h :z f g :y a d)]
+                [a b c d e f g h])
+          ;; left
+          :ae (let [[a e d h b f] (scale a e :x d h :z b f)]
+                [a b c d e f g h])
+          :bf (let [[b f ] (scale b f :x c g :z a b)]
+                [a b c d e f g h])
+          ;; right
+          :cg (let [[c g b f d h] (scale c g :x b f :z d h)]
+                [a b c d e f g h])
+          :dh (let [[d h a e c g] (scale d h :x a e :z c g)]
+                [a b c d e f g h]))
+        node (inc (depth node)))]))
+#+END_SRC
 ** Operator constructors
 
 #+BEGIN_SRC clojure :noweb-ref op-ctors
@@ -381,24 +469,36 @@ sides and returns the original node and the mirrored version.
        (map? out) (reduce-kv assoc default out)
        (sequential? out) (vec out)
        :default default)))
-
+  
   (defn subdiv
     [& {:keys [cols rows slices out empty?] :or {cols 1 rows 1 slices 1}}]
     {:op :sd
      :args {:cols cols :rows rows :slices slices}
      :out (operator-output (* cols rows slices) out empty?)})
-
+  
   (defn subdiv-inset
     [& {:keys [dir inset out empty?] :or {dir :y inset 0.25}}]
-    {:op :sd-ins
+    {:op :sd-inset
      :args {:dir dir :inset inset}
      :out (operator-output 5 out empty?)})
-
+  
   (defn reflect
     [& {:keys [dir out empty?] :or {dir :n}}]
-    {:op :refl
+    {:op :reflect
      :args {:dir dir}
      :out (operator-output 2 out empty?)})
+  
+  (defn extrude
+    [& {:keys [dir len out empty?] :or {dir :n len 1.0}}]
+    {:op :extrude
+     :args {:dir dir :len len}
+     :out (operator-output 1 out empty?)})
+  
+  (defn scale-edge
+    [edge sym & {:keys [scale out] :or {scale 0.5}}]
+    {:op :scale-edge
+     :args {:edge edge :sym sym :scale scale}
+     :out (operator-output 1 out false)})
 #+END_SRC
 
 ** Tree walking & node processing
@@ -442,10 +542,30 @@ transformation.
 
 #+BEGIN_SRC clojure :noweb-ref helpers
   (defn unmap-uvw
+    "Takes a seq of 8 points defining a box and vector of normalized
+    u,v,w coordinates. Applies trilinear interpolation to compute point
+    within the box:
+    u is coord along AD/BC edge, v along AE/BF, w along AB/DC."
     [[a b c d e f g h] [u v w]]
-    (g/mix
-     (g/mix a d e h u v)
-     (g/mix b c f g u v) w))
+    (g/mix (g/mix a d e h u v) (g/mix b c f g u v) w))
+  
+  (defn child-path
+    "Takes a seq of child indices and constructs a lookup path/vector
+    for them by interleaving `:out` in the seq:
+        (child-path [1 0 2]) => [:out 1 :out 0 :out 2]"
+    [path] (vec (interleave (repeat :out) path)))
+  
+  (defn apply-recursively
+    "Recursively injects tree into itself `n` times, starting at given
+    child path. At each subsequent level, the original tree given is
+    injected at index `id` of the `:out` child node vector. The initial
+    path is simply a seq of indices and will be translated into an
+    actual path using the `child-path` fn."
+    [tree n path id]
+    (loop [t' tree, path (child-path path), n (dec n)]
+      (if (pos? n)
+        (recur (assoc-in t' path tree) (into path [:out id]) (dec n))
+        t')))
 #+END_SRC
 
 ** Mesh functions
