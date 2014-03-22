@@ -655,3 +655,6 @@ into a proper Clojure namespace...
 * TODOs
 
 - add octree mesh for snapping verts
+- scale-edge op should produce planar results (or add as new op)
+- add desc for side IDs (east/west ...)
+
