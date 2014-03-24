@@ -7,7 +7,7 @@
 
 Declarative 3D form evolution through tree-based transformations.
 
-[[../assets/img/morphogen-ex03.jpg]]
+[[../assets/img/morphogen-virus.jpg]]
 
 This project is part of the [[https://github.com/thi-ng/][thi.ng]] collection of Clojure &
 Clojurescript libraries and is written in a literate programming
@@ -147,12 +147,9 @@ edit its path in =tangle.sh=):
 #+END_SRC
 
 Tangling is the process of extracting & combining source blocks from
-=.org= files into an actual working project/source tree. This project
-currently consists of 26 namespaces and 6500+ lines of code, the
-tangling of which takes approx. 20 secs.
-
-Once tangling is complete, you can =cd= into the generated project
-directory (=babel=) and then use =lein= as usual.
+=.org= files into an actual working project/source tree. Once tangling
+is complete, you can =cd= into the generated project directory
+(=babel=) and then use =lein= as usual.
 
 *** Testing
 

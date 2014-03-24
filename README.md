@@ -1,6 +1,6 @@
 # thi.ng/morphogen
 
-![Luxor test scene](assets/img/morphogen-ex03.jpg)
+![Luxor test scene](assets/img/morphogen-virus.jpg)
 
 Declarative 3D form evolution through tree-based transformations.
 
