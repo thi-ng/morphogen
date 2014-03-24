@@ -340,11 +340,11 @@ five child nodes in the specified order:
              [(g/+ a o) (g/+ b o) c d (g/+ e o) (g/+ f o) g h])
         :n (let [o (g/* (g/normal3* e f g) len)]
              [a b c d (g/+ e o) (g/+ f o) (g/+ g o) (g/+ h o)])
-        :s (let [o (g/* (g/normal3* a d c) len)]
+        :s (let [o (g/* (g/normal3* d a c) len)]
              [(g/- a o) (g/- b o) (g/- c o) (g/- d o) e f g h])
         :f (let [o (g/* (g/normal3* b c g) len)]
              [a (g/+ b o) (g/+ c o) d e (g/+ f o) (g/+ g o) h])
-        :b (let [o (g/* (g/normal3* c d e) len)]
+        :b (let [o (g/* (g/normal3* d a e) len)]
              [(g/+ a o) b c (g/+ d o) (g/+ e o) f g (g/+ h o)]))
       node (inc (depth node)))])
   
@@ -450,7 +450,7 @@ sides and returns the original node and the mirrored version.
           ;; left
           :ae (let [[a e d h b f] (scale a e :x d h :z b f)]
                 [a b c d e f g h])
-          :bf (let [[b f ] (scale b f :x c g :z a b)]
+          :bf (let [[b f c g a e] (scale b f :x c g :z a e)]
                 [a b c d e f g h])
           ;; right
           :cg (let [[c g b f d h] (scale c g :x b f :z d h)]
@@ -548,13 +548,13 @@ transformation.
     u is coord along AD/BC edge, v along AE/BF, w along AB/DC."
     [[a b c d e f g h] [u v w]]
     (g/mix (g/mix a d e h u v) (g/mix b c f g u v) w))
-  
+
   (defn child-path
     "Takes a seq of child indices and constructs a lookup path/vector
     for them by interleaving `:out` in the seq:
         (child-path [1 0 2]) => [:out 1 :out 0 :out 2]"
     [path] (vec (interleave (repeat :out) path)))
-  
+
   (defn apply-recursively
     "Recursively injects tree into itself `n` times, starting at given
     child path. At each subsequent level, the original tree given is
@@ -566,6 +566,24 @@ transformation.
       (if (pos? n)
         (recur (assoc-in t' path tree) (into path [:out id]) (dec n))
         t')))
+
+  (defn map-leaves
+    "Takes a fn and operator tree, applies f to all leaf nodes. The fn
+    must accept 3 args: the leaf's parent node, the child index of the
+    leaf in the parent and the tree depth. The leaf will be replaced
+    with the fn's return value."
+    ([f tree] (map-leaves f tree 0))
+    ([f tree depth]
+       (->> (:out tree)
+            (interleave (range))
+            (partition 2)
+            (reduce
+             (fn [acc [i c]]
+               (cond
+                (seq (:out c)) (assoc-in acc [:out i] (map-leaves f c (inc depth)))
+                (map? c) (assoc-in acc [:out i] (f acc i depth))
+                :default acc))
+             tree))))
 #+END_SRC
 
 ** Mesh functions
