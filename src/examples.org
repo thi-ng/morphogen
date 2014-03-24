@@ -8,6 +8,8 @@ REPL, e.g. via =(load-file "examples/ex03.clj")=. Loading the first
 example will take a few seconds, since the thi.ng/geom library is
 quite large, however subsequent calls will take < 1 sec...
 
+(See [[file:index.org][index.org]] for further information how to tangle & build this project)
+
 Each example generates a 3D model in Stanford PLY format, which is
 saved in this file [[../babel/p.ply]] and can then be imported into other
 3d applications. If you need a simple mesh viewer, we recommend
@@ -56,13 +58,20 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex02.clj :noweb yes :mkdirp yes :padline no
   (ns ex02
     <<require-mg>>)
-  
+
   (defn make-stripes
+    "Returns a tree which subdivides form into `n` columns and only
+    keeps those for whose index the given predicate returns a truthy
+    value. If no predicate is given, `even?` is used by default."
     ([n] (make-stripes even? n))
     ([pred n]
        (mg/subdiv :cols n :out (mapv #(if (pred %) {}) (range n)))))
-  
+
   (defn stripes*
+    "Similar to `make-stripes`, but replaces the killed off columns with
+    connector elements by splitting each in 3x3 rows/slices and only
+    keeping the center one. Returns tree of columns as created by
+    `make-stripes` and connectors between them."
     [pred n]
     (loop [acc (make-stripes pred n) i (if (= pred even?) 1 0)]
       (if (< i n)
@@ -73,12 +82,14 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
            :rows 3 :slices 3 :out {4 {}} :empty? true))
          (+ i 2))
         acc)))
-  
+
   (def tree
+    "Main tree. Splits seed form into 3x3 cols/slices, removes center
+    and replaces others with striped versions."
     (let [se (stripes* even? 9)
           so (mg/subdiv :rows 2 :out [(stripes* odd? 9)])]
       (mg/subdiv :cols 3 :slices 3 :out [se so se se nil se se so se])))
-  
+
   (mg/save-mesh (mg/seed (a/aabb 1 0.2 1)) tree)
 #+END_SRC
 
@@ -98,22 +109,20 @@ various repetitive sub-transformations using simple functions.
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex03.clj :noweb yes :mkdirp yes :padline no
   (ns ex03
     <<require-mg>>)
-  
+
   (def t
-    "Hexagon arrangement as sequence of nested reflections."
-    (let [ring (mg/apply-recursively (mg/reflect :dir :e) 5 [1] 1)
-          reflected-ring (mg/reflect :dir :n :out [{} ring])
-          inject #(-> ring
+    "Arrangement of 10 hexagons as sequence of nested reflections."
+    (let [hex (mg/apply-recursively (mg/reflect :dir :e) 5 [1] 1)
+          reflected-hex (mg/reflect :dir :n :out [{} hex])
+          inject #(-> hex
                       (assoc-in (mg/child-path [1 1 0]) %)
                       (assoc-in (mg/child-path [1 1 1 1 0]) %))
-          ring-start (mg/reflect :dir :s :out [{} (inject reflected-ring)])]
-      (mg/reflect
-       :dir :s :out [(inject ring-start)
-                     (inject reflected-ring)])))
-  
+          seed-clone (mg/reflect :dir :s :out [{} (inject reflected-hex)])]
+      (mg/reflect :dir :s :out [(inject seed-clone) (inject reflected-hex)])))
+
   ;; apply to sphere lattice segment to form hemisphere
   (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t)
-  
+
   ;; apply to circle lattice segment to form flat structure
   ;;(mg/save-mesh (mg/seed (mg/circle-lattice-seg 6 0.25 0.2)) t)
 #+END_SRC
@@ -128,18 +137,119 @@ hemisphere. Just uncomment the last line to see its result.
 
 [[../assets/img/morphogen-virus.jpg]]
 
-This structure very nicely demonstrates the potential of the
-morphogenic approach and uses the same base elements as above, but
-with the tree having much deeper nesting to create the additional
-structures, which are unfolded & extruded from the 60 individual
-hexagon line segments.
+This structure very nicely demonstrates the potential of the whole
+morphogenic approach and uses the same hexagonal base elements as the
+previous example, but with the tree having much deeper nesting to
+create the additional antenna structures & hollowed skeleton cells,
+all of which are unfolded & extruded from the 60 individual hexagon
+line segments. The resulting structure has 51840 faces, 8460 times
+that the initial seed form/box!
 
-*** TODO simlify virus.clj
+#+BEGIN_SRC clojure
+  (ns ex04
+    (:require
+     [thi.ng.morphogen.core :as mg]
+     [thi.ng.geom.core :as g :refer [vec3]]
+     [thi.ng.geom.aabb :as a])
+    (:import
+     [thi.ng.morphogen.core BoxNode]))
+
+  (defn hollow-out
+    "Returns a tree which applies the `subdiv-inset` operator to a form
+    in the given direction and removes the center child or optionally
+    injects given :out vector/map of children. If `empty?` is true, all
+    children are removed by default (only makes sense if other children
+    are given, else it should be false)."
+    ([dir inset]
+       (hollow-out dir inset false {4 nil}))
+    ([dir inset empty? out]
+       (mg/subdiv-inset :dir dir :inset inset :out out :empty? empty?)))
+
+  (defn antenna-ring
+    "Returns tree which extrudes form in given direction (east/west),
+    splits it into 3 columns, scales side edges of last to half length
+    and then forms ring using last column by recursively reflecting it
+    `n` times."
+    [dir edge1 edge2 ring-child-id n]
+    (let [ring (mg/apply-recursively (mg/reflect :dir :n) n [1] 1)]
+      (mg/extrude
+       :dir dir :len 0.1
+       :out
+       [(mg/scale-edge
+         edge1 :y
+         :out
+         [(mg/subdiv
+           :cols 3
+           :out
+           {ring-child-id (mg/scale-edge edge2 :z :out [ring])})])])))
+
+  (def antenna-rings
+    "The two east/west facing ring modules attached to the tip of the antenna."
+    [(antenna-ring :w :ab :bf 0 13)
+     (antenna-ring :e :cd :cg 2 13)])
+
+  (def antenna-tip
+    "The last (thinnest) two antenna segments with rings attached to the lower one."
+    (mg/extrude
+     :dir :b :len 0.5
+     :out [(mg/subdiv
+            :slices 8
+            :out {0 (hollow-out :z 0.35 false {4 (mg/extrude :dir :b :len 1)})
+                  1 (mg/subdiv :cols 2 :out antenna-rings)})]))
+
+  (def antenna-main
+    "Main antenna parts without base ."
+    (hollow-out
+     :z 0.25 true
+     {4 (mg/extrude
+         :dir :b :len 0.25
+         :out [(hollow-out :z 0.25 false {4 antenna-tip})])}))
+
+  (defn antenna-module
+    "Complete antenna module with configurable base."
+    [inset]
+    (mg/extrude
+     :dir :b :len 0.2
+     :out [(hollow-out
+            :z inset false
+            {4 (mg/subdiv :slices 2 :out {0 antenna-main})})]))
+
+  (def tree
+    "Main tree. First forms arrangement of 10 hexagons using seed form &
+    sequence of nested reflections. Then applies skeletonization and
+    attaches antennas to all 60 segments. These are injected using the
+    `map-leaves` function which replaces all leaf nodes in the tree with
+    a new subtree."
+    (let [hex (mg/apply-recursively (mg/reflect :dir :e) 5 [1] 1)
+          refl-hex (mg/reflect :dir :n :out [{} hex])
+          inject #(-> hex
+                      (assoc-in (mg/child-path [1 1 0]) %)
+                      (assoc-in (mg/child-path [1 1 1 1 0]) %))
+          seed-clone (mg/reflect :dir :s :out {1 (inject refl-hex)})
+          inset 0.1
+          skeleton (hollow-out
+                    :y inset false
+                    [(hollow-out :z inset)
+                     (mg/subdiv
+                      :cols 3
+                      :out [(hollow-out :z inset)
+                            (antenna-module inset)
+                            (hollow-out :z inset)])
+                     (hollow-out :x inset)
+                     (hollow-out :x inset)])]
+      (->> (mg/reflect :dir :s :out [(inject seed-clone) (inject refl-hex)])
+           (mg/map-leaves (constantly skeleton)))))
+
+  ;; apply to sphere lattice segment to form hemisphere
+  (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree)
+#+END_SRC
 
 ** TODO Extrusions & edge scaling
 
-#+BEGIN_SRC clojure :tangle ../babel/examples/ex04.clj :noweb yes :mkdirp yes :padline no
-  (ns ex04
+WIP, ignore...
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex05.clj :noweb yes :mkdirp yes :padline no
+  (ns ex05
     <<require-mg>>)
   
   (mg/save-mesh
