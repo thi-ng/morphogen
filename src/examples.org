@@ -124,7 +124,19 @@ hemisphere. Just uncomment the last line to see its result.
 
 [[../assets/img/morphogen-ex03-flat.jpg]]
 
-** Extrusions & edge scaling
+** TODO Hex virus
+
+[[../assets/img/morphogen-virus.jpg]]
+
+This structure very nicely demonstrates the potential of the
+morphogenic approach and uses the same base elements as above, but
+with the tree having much deeper nesting to create the additional
+structures, which are unfolded & extruded from the 60 individual
+hexagon line segments.
+
+*** TODO simlify virus.clj
+
+** TODO Extrusions & edge scaling
 
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex04.clj :noweb yes :mkdirp yes :padline no
   (ns ex04
@@ -140,7 +152,7 @@ hemisphere. Just uncomment the last line to see its result.
 #+END_SRC
 ** TODO different node types
 
-Sandbox/kitchen sink...
+Sandbox/kitchen sink... ignore :)
 
 #+BEGIN_SRC clojure
   (defn rot-around-p [p q t] (g/+ q (g/rotate-y (g/- p q) t)))
