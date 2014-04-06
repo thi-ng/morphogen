@@ -1,6 +1,6 @@
 # thi.ng/morphogen
 
-![Luxor test scene](assets/img/morphogen-virus.jpg)
+![Morphogen Hex Virus](assets/img/morphogen-virus.jpg)
 
 Declarative 3D form evolution through tree-based transformations. The [video version](https://www.youtube.com/watch?v=vXlOB4NfAE0) of the above structure demonstrates the overall process quite succinctly...
 

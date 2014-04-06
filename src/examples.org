@@ -25,6 +25,20 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
    [thi.ng.morphogen.core BoxNode])
 #+END_SRC
 
+** Reusable helpers
+
+At some point these will be refactored and moved into core ns...
+
+#+BEGIN_SRC clojure :noweb-ref stripes
+  (defn make-stripes
+    "Returns a tree which subdivides form into `n` columns and only
+    keeps those for whose index the given predicate returns a truthy
+    value. If no predicate is given, `even?` is used by default."
+    ([n] (make-stripes even? n))
+    ([pred n]
+       (mg/subdiv :cols n :out (mapv #(if (pred %) {}) (range n)))))
+#+END_SRC
+
 ** Extruded aluminium style module
 
 [[../assets/img/morphogen-ex01.jpg]]
@@ -59,13 +73,7 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
   (ns ex02
     <<require-mg>>)
 
-  (defn make-stripes
-    "Returns a tree which subdivides form into `n` columns and only
-    keeps those for whose index the given predicate returns a truthy
-    value. If no predicate is given, `even?` is used by default."
-    ([n] (make-stripes even? n))
-    ([pred n]
-       (mg/subdiv :cols n :out (mapv #(if (pred %) {}) (range n)))))
+  <<stripes>>
 
   (defn stripes*
     "Similar to `make-stripes`, but replaces the killed off columns with
@@ -145,7 +153,7 @@ all of which are unfolded & extruded from the 60 individual hexagon
 line segments. The resulting structure has 51840 faces, 8460 times
 that the initial seed form/box!
 
-#+BEGIN_SRC clojure
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex04.clj :noweb yes :mkdirp yes :padline no
   (ns ex04
     (:require
      [thi.ng.morphogen.core :as mg]
@@ -244,12 +252,44 @@ that the initial seed form/box!
   (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree)
 #+END_SRC
 
+** MIT Selfassembly module
+
+[[../assets/img/morphogen-ex05.jpg]]
+
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex05.clj :noweb yes :mkdirp yes :padline no
+  (ns ex05
+    <<require-mg>>)
+
+  <<stripes>>
+
+  (defn stripes*
+    "Similar to `make-stripes`, but replaces the killed off columns with
+    connector elements by splitting each with the
+    keeping the center one. Returns tree of columns as created by
+    `make-stripes` and connectors between them."
+    [pred gap-opts n]
+    (loop [acc (make-stripes pred n) i (if (= pred even?) 1 0)]
+      (if (< i n)
+	(recur
+	 (assoc-in acc [:out i] (apply mg/subdiv gap-opts))
+	 (+ i 2))
+	acc)))
+
+  (def tree
+    (mg/subdiv
+     :cols 3
+     :out [{}
+	   (stripes* odd? [:rows 3 :out [nil {} nil]] 9)
+	   {}]))
+
+  (mg/save-mesh (mg/seed (a/aabb 1)) tree)
+#+END_SRC
 ** TODO Extrusions & edge scaling
 
 WIP, ignore...
 
-#+BEGIN_SRC clojure :tangle ../babel/examples/ex05.clj :noweb yes :mkdirp yes :padline no
-  (ns ex05
+#+BEGIN_SRC clojure :tangle ../babel/examples/ex06.clj :noweb yes :mkdirp yes :padline no
+  (ns ex06
     <<require-mg>>)
   
   (mg/save-mesh
@@ -258,7 +298,6 @@ WIP, ignore...
     :ad :z
     :out [(mg/scale-edge
            :ab :y :out [(mg/reflect :dir :e :out [{} (mg/reflect :dir :e)])])]))
-
 #+END_SRC
 ** TODO different node types
 
