@@ -1,5 +1,5 @@
 #+SETUPFILE: "setup.org"
-#+TITLE:          thi.ng/morphogen
+#+TITLE: thi.ng/morphogen
 
 * About the project
 
@@ -81,17 +81,25 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-2156"]
+[org.clojure/clojurescript "0.0-2202"]
 #+END_SRC
-**** [[https://github.com/thi-ng/geom][thi.ng/geom]]
+**** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom "0.2.1-SNAPSHOT"]
+[thi.ng/geom-core "0.3.0-SNAPSHOT"]
+#+END_SRC
+**** [[https://github.com/thi-ng/geom][thi.ng/geom-types]]
+#+BEGIN_SRC clojure :noweb-ref dep-geom
+[thi.ng/geom-types "0.3.0-SNAPSHOT"]
+#+END_SRC
+**** [[https://github.com/thi-ng/geom][thi.ng/geom-csg]]
+#+BEGIN_SRC clojure :noweb-ref dep-geom
+[thi.ng/geom-csg "0.3.0-SNAPSHOT"]
 #+END_SRC
 
 *** Development
 **** [[https://github.com/thi-ng/luxor][thi.ng/luxor]]
 #+BEGIN_SRC clojure :noweb-ref dep-luxor
-[thi.ng/luxor "0.2.1-SNAPSHOT"]
+[thi.ng/luxor "0.3.0-SNAPSHOT"]
 #+END_SRC
 **** [[https://github.com/cemerick/austin][Austin]]
 #+BEGIN_SRC clojure :noweb-ref dep-austin

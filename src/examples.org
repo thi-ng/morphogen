@@ -19,7 +19,8 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
 #+BEGIN_SRC clojure :noweb-ref require-mg
   (:require
    [thi.ng.morphogen.core :as mg]
-   [thi.ng.geom.core :as g :refer [vec3]]
+   [thi.ng.geom.core :as g]
+   [thi.ng.geom.core.vector :as v :refer [vec3]]
    [thi.ng.geom.aabb :as a])
   (:import
    [thi.ng.morphogen.core BoxNode])
@@ -270,19 +271,21 @@ that the initial seed form/box!
     [pred gap-opts n]
     (loop [acc (make-stripes pred n) i (if (= pred even?) 1 0)]
       (if (< i n)
-	(recur
-	 (assoc-in acc [:out i] (apply mg/subdiv gap-opts))
-	 (+ i 2))
-	acc)))
+        (recur
+         (assoc-in acc [:out i] (apply mg/subdiv gap-opts))
+         (+ i 2))
+        acc)))
 
   (def tree
     (mg/subdiv
      :cols 3
-     :out [{}
-	   (stripes* odd? [:rows 3 :out [nil {} nil]] 9)
-	   {}]))
+     :out [(mg/subdiv
+            :cols 2 :out [(mg/subdiv-inset :dir :x :inset 0.005 :out {4 nil}) {}])
+           (stripes* odd? [:rows 3 :out [nil {} nil]] 19)
+           (mg/subdiv
+            :cols 2 :out [{} (mg/subdiv-inset :dir :x :inset 0.0055 :out {4 {}} :empty? true)])]))
 
-  (mg/save-mesh (mg/seed (a/aabb 1)) tree)
+  (mg/save-mesh (mg/seed (a/aabb 1 0.2 0.2)) tree)
 #+END_SRC
 ** TODO Extrusions & edge scaling
 
