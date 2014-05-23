@@ -158,11 +158,11 @@ that the initial seed form/box!
   (ns ex04
     (:require
      [thi.ng.morphogen.core :as mg]
-     [thi.ng.geom.core :as g :refer [vec3]]
+     [thi.ng.geom.core :as g]
      [thi.ng.geom.aabb :as a])
     (:import
      [thi.ng.morphogen.core BoxNode]))
-
+  
   (defn hollow-out
     "Returns a tree which applies the `subdiv-inset` operator to a form
     in the given direction and removes the center child or optionally
@@ -173,7 +173,7 @@ that the initial seed form/box!
        (hollow-out dir inset false {4 nil}))
     ([dir inset empty? out]
        (mg/subdiv-inset :dir dir :inset inset :out out :empty? empty?)))
-
+  
   (defn antenna-ring
     "Returns tree which extrudes form in given direction (east/west),
     splits it into 3 columns, scales side edges of last to half length
@@ -191,29 +191,33 @@ that the initial seed form/box!
            :cols 3
            :out
            {ring-child-id (mg/scale-edge edge2 :z :out [ring])})])])))
-
+  
   (def antenna-rings
     "The two east/west facing ring modules attached to the tip of the antenna."
     [(antenna-ring :w :ab :bf 0 13)
      (antenna-ring :e :cd :cg 2 13)])
-
+  
   (def antenna-tip
     "The last (thinnest) two antenna segments with rings attached to the lower one."
-    (mg/extrude
-     :dir :b :len 0.5
-     :out [(mg/subdiv
-            :slices 8
-            :out {0 (hollow-out :z 0.35 false {4 (mg/extrude :dir :b :len 1)})
-                  1 (mg/subdiv :cols 2 :out antenna-rings)})]))
-
+    (mg/subdiv
+     :cols 3
+     :out [nil
+           (mg/extrude
+                :dir :b :len 0.5
+                :out [(mg/subdiv
+                       :slices 8
+                       :out {0 (hollow-out :z 0.01 false {4 (mg/extrude :dir :b :len 1)})
+                             1 (mg/subdiv :cols 2 :out antenna-rings)})])
+           nil]))
+  
   (def antenna-main
     "Main antenna parts without base ."
     (hollow-out
-     :z 0.25 true
+     :z 0.025 true
      {4 (mg/extrude
          :dir :b :len 0.25
-         :out [(hollow-out :z 0.25 false {4 antenna-tip})])}))
-
+         :out [(hollow-out :z 0.025 false {4 antenna-tip})])}))
+  
   (defn antenna-module
     "Complete antenna module with configurable base."
     [inset]
@@ -222,7 +226,7 @@ that the initial seed form/box!
      :out [(hollow-out
             :z inset false
             {4 (mg/subdiv :slices 2 :out {0 antenna-main})})]))
-
+  
   (def tree
     "Main tree. First forms arrangement of 10 hexagons using seed form &
     sequence of nested reflections. Then applies skeletonization and
@@ -235,7 +239,7 @@ that the initial seed form/box!
                       (assoc-in (mg/child-path [1 1 0]) %)
                       (assoc-in (mg/child-path [1 1 1 1 0]) %))
           seed-clone (mg/reflect :dir :s :out {1 (inject refl-hex)})
-          inset 0.1
+          inset 0.03
           skeleton (hollow-out
                     :y inset false
                     [(hollow-out :z inset)
@@ -248,7 +252,7 @@ that the initial seed form/box!
                      (hollow-out :x inset)])]
       (->> (mg/reflect :dir :s :out [(inject seed-clone) (inject refl-hex)])
            (mg/map-leaves (constantly skeleton)))))
-
+  
   ;; apply to sphere lattice segment to form hemisphere
   (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree)
 #+END_SRC
