@@ -198,9 +198,9 @@ defrecords), operator nodes (the entire tree, really) are simple
 Clojure maps with this basic structure:
 
 #+BEGIN_SRC clojure
-  {:op :operator-id            ;; multimethod operator id
-   :args {:foo 23 :bar 42 ...} ;; map of arbitrary transformation arguments
-   :out [{:op ...} nil {} ...] ;; vector of nested child operators
+  {:op   :operator-id           ;; multimethod operator id
+   :args {:foo 23 :bar 42 ...}  ;; map of arbitrary transformation arguments
+   :out  [{:op ...} nil {} ...] ;; vector of nested child operators
   }
 #+END_SRC
 
@@ -268,8 +268,8 @@ implementations:
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmulti operator
-    (fn [g-node {:keys [op]}]
-     (if op [(type g-node) op])))
+    (fn [g-node op-node]
+     (if (:op op-node) [(type g-node) (:op op-node)])))
 
   ;; leaf node operator (no-op)
   (defmethod operator nil [_ _] nil)
@@ -291,8 +291,8 @@ implementations:
     [node {:keys [args]}]
     (let [depth (inc (tree-depth node))]
       (->> (g/subdivide node args)
-	   (map #(BoxNode. % node depth)))))
-
+           (mapv #(BoxNode. % node depth)))))
+  
 #+END_SRC
 
 *** Inset subdivision
@@ -347,7 +347,7 @@ five child nodes in the specified order:
               [a b a2 a1 e f b2 b1]
               [d1 d2 c d c1 c2 g h]
               [a1 a2 d2 d1 b1 b2 c2 c1]]))))
-
+  
   (defn subdivide-inset
     [[a b c d e f g h :as points]
      {i :inset dir :dir :or {i 0.1 dir :y}}]
@@ -369,25 +369,25 @@ five child nodes in the specified order:
               [a2 b2 c2 d2 e2 f2 g2 h2]])
         :z (let [[a2 d2 h2 e2] (inset [a d h e])
                  [b2 c2 g2 f2] (inset [b c g f])
-             p' [a2 b2 c2 d2 e2 f2 g2 h2]]
+                 p' [a2 b2 c2 d2 e2 f2 g2 h2]]
              (if (some nil? p')
                (do
-                 (prn points)
-                 (prn p')
-                 (prn "----")
+                 ;;(prn points)
+                 ;;(prn p')
+                 ;;(prn "----")
                  [points])
                [[a b c d a2 b2 c2 d2]
                 [e2 f2 g2 h2 e f g h]
                 [a b b2 a2 e f f2 e2]
                 [d2 c2 c d h2 g2 g h]
                 [a2 b2 c2 d2 e2 f2 g2 h2]])))))
-
+  
   (defmethod operator [BoxNode :sd-inset]
     [node {:keys [args]}]
     (let [depth (inc (tree-depth node))]
       (->> (subdivide-inset (:points node) args)
-           (map #(BoxNode. % node depth)))))
-
+           (mapv #(BoxNode. % node depth)))))
+  
 #+END_SRC
 
 *** Extrusion
@@ -409,11 +409,11 @@ five child nodes in the specified order:
     (let [c1 (gu/centroid (face-vertices node dir))
           c2 (gu/centroid (face-vertices node (face-opposite dir)))
           n (g/normalize (g/- c1 c2) len)]
-      (prn dir n)
+      ;;(prn dir n)
       [(BoxNode.
         (offset-face-points (:points node) dir n)
         node (inc (tree-depth node)))]))
-
+  
 #+END_SRC
 
 *** Reflection
@@ -432,8 +432,17 @@ sides and returns the original node and the mirrored version.
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defn reflect-on-plane
-    [p q n]
-    (g/+ q (g/reflect (g/- q p) (g/normalize n))))
+    "Reflects point p on plane defined by point q & normal n.
+    Normal vector must be normalized."
+    [^thi.ng.geom.core.vector.Vec3 p
+     ^thi.ng.geom.core.vector.Vec3 q
+     ^thi.ng.geom.core.vector.Vec3 n]
+    (let [^thi.ng.geom.core.vector.Vec3 r (g/- q p)
+          d (* (g/dot r n) 2.0)]
+      (thi.ng.geom.core.vector.Vec3.
+       (+ (mm/msub (.-x n) d (.-x r)) (.-x q))
+       (+ (mm/msub (.-y n) d (.-y r)) (.-y q))
+       (+ (mm/msub (.-z n) d (.-z r)) (.-z q)))))
   
   (defmethod operator [BoxNode :reflect]
     [{[a b c d e f g h] :points :as node}
@@ -531,14 +540,14 @@ sides and returns the original node and the mirrored version.
           pabd (pl/plane-from-points a b d)
           pacd (pl/plane-from-points a c d)
           pbcd (pl/plane-from-points b c d)]
-      (map #(g/dist % %2) [pbcd pacd pabd pabc] [a b c d])))
+      (mapv #(g/dist % %2) [pbcd pacd pabd pabc] [a b c d])))
 
   (defmethod operator [BoxNode :scale-side]
     [{[a b c d e f g h] :points :as node}
      {{:keys [side scale] :or {scale 0.5}} :args}]
     (let [s (* (- 1.0 scale) 0.5)
           [fa fb fc fd] (face-vertices node side)
-          [fa fb fc fd] (map (fn [[p q]] (g/mix p q s)) [[fa fc] [fb fd] [fc fa] [fd fb]])]
+          [fa fb fc fd] (mapv (fn [[p q]] (g/mix p q s)) [[fa fc] [fb fd] [fc fa] [fd fb]])]
       [(BoxNode.
         (case side
           :e [a b fa fb e f fd fc]
@@ -557,7 +566,7 @@ sides and returns the original node and the mirrored version.
     (let [n (if (v/vec3? offset)
               offset
               (g/* (quad-normal (face-vertices node ref)) offset))]
-      (prn side ref n)
+      ;;(prn side ref n)
       [(BoxNode.
         (case side
           :e [a b (g/+ c n) (g/+ d n) e f (g/+ g n) (g/+ h n)]
@@ -724,8 +733,8 @@ transformation.
                        (walk c ctree max-depth acc)
                        acc))
                    acc))
-             (conj acc (gm/into-mesh (faces node)))))
-         (conj acc (gm/into-mesh (faces node))))))
+             (conj acc (faces node))))
+         (conj acc (faces node)))))
 #+END_SRC
 
 ** Helper functions
@@ -826,8 +835,9 @@ transformation.
 
   (defn union-mesh
     [meshes]
-    (reduce g/into meshes))
+    (reduce g/into (gm/gmesh) meshes))
 
+  ,#+clj
   (defn save-mesh
     ([seed tree] (save-mesh seed tree "p.ply" 1e6))
     ([seed tree path] (save-mesh seed tree path 1e6))
@@ -837,7 +847,6 @@ transformation.
               (union-mesh)
               (g/tessellate)
               (mio/write-ply o)))))
-
 #+END_SRC
 
 ** Complete namespace
@@ -847,6 +856,7 @@ into a proper Clojure namespace...
 
 #+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/core.cljx :noweb yes :mkdirp yes :padline no
   (ns thi.ng.morphogen.core
+    ,#+cljs (:require-macros [thi.ng.macromath.core :as mm])
     (:require
      [thi.ng.geom.core :as g]
      [thi.ng.geom.core.vector :as v :refer [vec3]]
@@ -857,27 +867,29 @@ into a proper Clojure namespace...
      [thi.ng.geom.plane :as pl]
      [thi.ng.geom.aabb :as a]
      [thi.ng.geom.gmesh :as gm]
-     [thi.ng.geom.mesh.io :as mio]
      [thi.ng.geom.mesh.csg :as csg]
      [thi.ng.common.data.core :as d]
      [thi.ng.common.math.core :as m :refer [*eps*]]
-     [clojure.java.io :as io]
-     [clojure.pprint :refer [pprint]]))
-
+     ,#+clj [thi.ng.macromath.core :as mm]
+     ,#+clj [thi.ng.geom.mesh.io :as mio]
+     ,#+clj [clojure.java.io :as io]
+     ,#+clj [clojure.pprint :refer [pprint]]
+     ))
+  
   (declare operator)
-
+  
   <<helpers>>
-
+  
   <<proto>>
-
+  
   <<node>>
-
+  
   <<operators>>
-
+  
   <<op-ctors>>
-
+  
   <<tree-walk>>
-
+  
   <<meshing>>
 #+END_SRC
 
