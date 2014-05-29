@@ -814,7 +814,7 @@ transformation.
           [f g] (map #(g/+ off %) [b c])
           [e h] (map #(g/+ off %) [a d])]
       [b f g c a e h d]))
-
+  
   (defn sphere-lattice-seg
     [n h inset wall]
     (let [theta (/ m/PI n)
@@ -825,18 +825,20 @@ transformation.
           [f g] (map #(g/+ off %) (p/inset-polygon points (- inset)))
           [e h] (map #(g/+ off %) (p/inset-polygon points (- (- inset) wall)))]
       [b f g c a e h d]))
-
+  
   (defn csg-union-mesh
     [meshes]
     (->> meshes
          (map csg/mesh->csg)
          (reduce csg/union)
          (csg/csg->mesh)))
-
+  
   (defn union-mesh
-    [meshes]
-    (reduce g/into (gm/gmesh) meshes))
-
+    ([meshes]
+       (union-mesh (gm/gmesh) meshes))
+    ([target meshes]
+       (reduce g/into target meshes)))
+  
   ,#+clj
   (defn save-mesh
     ([seed tree] (save-mesh seed tree "p.ply" 1e6))
