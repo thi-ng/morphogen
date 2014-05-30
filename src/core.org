@@ -414,6 +414,26 @@ five child nodes in the specified order:
         (offset-face-points (:points node) dir n)
         node (inc (tree-depth node)))]))
   
+  (defmethod operator [BoxNode :ext-prop]
+    [{[a b c d e f g h] :points :as node}
+     {{:keys [dir len] :or {dir :n len 1.0}} :args}]
+    [(BoxNode.
+      (case dir
+        :e [a b (g/+ c (g/normalize (g/- c b) len)) (g/+ d (g/normalize (g/- d a) len))
+            e f (g/+ g (g/normalize (g/- g f) len)) (g/+ h (g/normalize (g/- h e) len))]
+        :w [(g/+ a (g/normalize (g/- a d) len)) (g/+ b (g/normalize (g/- b c) len)) c d
+            (g/+ e (g/normalize (g/- e h) len)) (g/+ f (g/normalize (g/- f g) len)) g h]
+        :f [a (g/+ b (g/normalize (g/- b a) len)) (g/+ c (g/normalize (g/- c d) len)) d
+            e (g/+ f (g/normalize (g/- f e) len)) (g/+ g (g/normalize (g/- g h) len)) h]
+        :b [(g/+ a (g/normalize (g/- a b) len)) b c (g/+ d (g/normalize (g/- d c) len))
+            (g/+ e (g/normalize (g/- e f) len)) f g (g/+ h (g/normalize (g/- h g) len))]
+        :n [a b c d
+            (g/+ e (g/normalize (g/- e a) len)) (g/+ f (g/normalize (g/- f b) len))
+            (g/+ g (g/normalize (g/- g c) len)) (g/+ h (g/normalize (g/- h d) len))]
+        :s [(g/+ a (g/normalize (g/- a e) len)) (g/+ b (g/normalize (g/- b f) len))
+            (g/+ c (g/normalize (g/- c g) len)) (g/+ d (g/normalize (g/- d h) len))
+            e f g h])
+      node (inc (tree-depth node)))])
 #+END_SRC
 
 *** Reflection
@@ -491,7 +511,7 @@ sides and returns the original node and the mirrored version.
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :scale-edge]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [edge sym scale] :or {scale 0.5}} :args}]
+     {{:keys [edge sym scale length] :or {scale 0.5}} :args}]
     (let [s (* scale 0.5)
           scale-if (fn [sid p q s]
                      (if (= sid sym)
@@ -499,8 +519,8 @@ sides and returns the original node and the mirrored version.
           scale (fn [p q s1 i j s2 k l]
                   (let [p' (g/mix p q s), q' (g/mix q p s)
                         dpq (g/dist p' q')
-                        [i j] (scale-if s1 i j (/ dpq (g/dist i j) 2))
-                        [k l] (scale-if s2 k l (/ dpq (g/dist k l) 2))]
+                        [i j] (scale-if s1 i j (/ dpq (g/dist i j)))
+                        [k l] (scale-if s2 k l (/ dpq (g/dist k l)))]
                     [p' q' i j k l]))]
       [(BoxNode.
         (condp = edge
@@ -656,43 +676,49 @@ sides and returns the original node and the mirrored version.
        (map? out) (reduce-kv assoc default out)
        (sequential? out) (vec out)
        :default default)))
-
+  
   (defn subdiv
     [& {:keys [cols rows slices out empty?] :or {cols 1 rows 1 slices 1}}]
     {:op :sd
      :args {:cols cols :rows rows :slices slices}
      :out (operator-output (* cols rows slices) out empty?)})
-
+  
   (defn subdiv-inset
     [& {:keys [dir inset out empty?] :or {dir :y inset 0.25}}]
     {:op :sd-inset
      :args {:dir dir :inset inset}
      :out (operator-output 5 out empty?)})
-
+  
   (defn reflect
     [& {:keys [dir out empty?] :or {dir :n}}]
     {:op :reflect
      :args {:dir dir}
      :out (operator-output 2 out empty?)})
-
+  
   (defn extrude
     [& {:keys [dir len out empty?] :or {dir :n len 1.0}}]
     {:op :extrude
      :args {:dir dir :len len}
      :out (operator-output 1 out empty?)})
-
+  
+  (defn extrude-prop
+    [& {:keys [dir len out empty?] :or {dir :n len 1.0}}]
+    {:op :ext-prop
+     :args {:dir dir :len len}
+     :out (operator-output 1 out empty?)})
+  
   (defn scale-edge
     [edge sym & {:keys [scale out] :or {scale 0.5}}]
     {:op :scale-edge
      :args {:edge edge :sym sym :scale scale}
      :out (operator-output 1 out false)})
-
+  
   (defn skew
     [side ref & {:keys [offset out] :or {offset 0.25}}]
     {:op :skew
      :args {:side side :ref ref :offset offset}
      :out (operator-output 1 out false)})
-
+  
   (defn split-displace
     [dir ref & {:keys [offset out] :or {offset 0.25}}]
     {:op :split-displace2
