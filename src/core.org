@@ -511,14 +511,19 @@ sides and returns the original node and the mirrored version.
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :scale-edge]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [edge sym scale length] :or {scale 0.5}} :args}]
-    (let [s (* scale 0.5)
+     {{:keys [edge sym scale len] :or {scale 0.5}} :args}]
+    (let [;;s (* scale 0.5)
           scale-if (fn [sid p q s]
                      (if (= sid sym)
-                       [(g/mix p q s) (g/mix q p s)] [p q]))
+                       (let [c (g/mix p q)]
+                         [(g/madd (g/- p c) s c) (g/madd (g/- q c) s c)])
+                       [p q]))
           scale (fn [p q s1 i j s2 k l]
-                  (let [p' (g/mix p q s), q' (g/mix q p s)
-                        dpq (g/dist p' q')
+                  (let [ll (g/dist p q)
+                        dpq (or len (* ll scale))
+                        s (/ dpq ll)
+                        c (g/mix p q)
+                        p' (g/madd (g/- p c) s c) q' (g/madd (g/- q c) s c)
                         [i j] (scale-if s1 i j (/ dpq (g/dist i j)))
                         [k l] (scale-if s2 k l (/ dpq (g/dist k l)))]
                     [p' q' i j k l]))]
@@ -553,7 +558,7 @@ sides and returns the original node and the mirrored version.
           :dh (let [[d h a e c g] (scale d h :x a e :z c g)]
                 [a b c d e f g h]))
         node (inc (tree-depth node)))]))
-
+  
   (defn make-planar
     [a b c d]
     (let [pabc (pl/plane-from-points a b c)
@@ -561,7 +566,7 @@ sides and returns the original node and the mirrored version.
           pacd (pl/plane-from-points a c d)
           pbcd (pl/plane-from-points b c d)]
       (mapv #(g/dist % %2) [pbcd pacd pabd pabc] [a b c d])))
-
+  
   (defmethod operator [BoxNode :scale-side]
     [{[a b c d e f g h] :points :as node}
      {{:keys [side scale] :or {scale 0.5}} :args}]
@@ -708,9 +713,9 @@ sides and returns the original node and the mirrored version.
      :out (operator-output 1 out empty?)})
   
   (defn scale-edge
-    [edge sym & {:keys [scale out] :or {scale 0.5}}]
+    [edge sym & {:keys [scale len out] :or {scale 0.5}}]
     {:op :scale-edge
-     :args {:edge edge :sym sym :scale scale}
+     :args {:edge edge :sym sym :scale scale :len len}
      :out (operator-output 1 out false)})
   
   (defn skew
