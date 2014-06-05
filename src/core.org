@@ -47,15 +47,16 @@ future extensions of *morphogen* functionality and ensures the overall
 functionality is not bound to the default box-shaped entities defined
 here. The protocol is purely used to define basic operations for
 navigating the tree (e.g. some operators might want access to parent
-nodes in order to achieve contraints etc.) and to extract facets for
-final mesh assembly:
+nodes in order to achieve contraints etc.). Node types also must
+provide (partial) implementations of the =PVertexAccess= &
+=PFaceAccess= protocols defined in the =thi.ng.geom.core= namespace to
+extract points & facets for final mesh assembly:
 
 #+BEGIN_SRC clojure :noweb-ref proto
   (defprotocol PNode
     (parent [_] "Returns the node's parent or `nil` if node is the root")
     (tree-depth [_]  "Returns the node's tree depth")
     (face-vertices [_ face] "Returns vertices for given face ID")
-    (faces [_]  "Returns a seq of the node's mesh faces (each face a vec of points)")
     (face-topology [_] "Returns number of vertices used for each face in the node"))
 #+END_SRC
 
@@ -92,10 +93,10 @@ field being a vector of the 8 box vertices (in this order: a, b, c .. h).
   (defrecord BoxNode [points parent depth]
 #+END_SRC
 
-Of course, the node type must implement the =PNode= protocol in order
-to participate in the tree transformation process and generate
-resulting geometries. The =faces= implementation returns a vector of 6
-quads arranged as shown in the diagram above.
+Of course, the node type must implement the above mentioned protocols
+in order to participate in the tree transformation process and
+generate resulting geometries. The =faces= implementation returns a
+vector of 6 quads arranged as shown in the diagram above.
 
 *IMPORTANT:* The vertex ordering of each face must be counterclockwise
 in order to produce outward facing face normals.
@@ -105,23 +106,29 @@ in order to produce outward facing face normals.
   (parent [_] parent)
   (tree-depth [_] depth)
   (face-vertices
-    [{[a b c d e f g h] :points} side]
-    (case side
-      :e [c d h g]
-      :w [a b f e]
-      :n [e f g h]
-      :s [a d c b]
-      :f [b c g f]
-      :b [d a e h]))
-  (faces [{[a b c d e f g h] :points}]
-    [[b c g f]  ;; front
-     [d a e h]  ;; back
-     [a b f e]  ;; west
-     [c d h g]  ;; east
-     [e f g h]  ;; north
-     [a d c b]] ;; south
-    )
+   [{[a b c d e f g h] :points} side]
+   (case side
+     :e [c d h g]
+     :w [a b f e]
+     :n [e f g h]
+     :s [a d c b]
+     :f [b c g f]
+     :b [d a e h]))
   (face-topology [_] 4)
+  
+  g/PVertexAccess
+  (vertices [_] points)
+  
+  g/PFaceAccess
+  (faces
+   [{[a b c d e f g h] :points}]
+   [[b c g f]  ;; front
+    [d a e h]  ;; back
+    [a b f e]  ;; west
+    [c d h g]  ;; east
+    [e f g h]  ;; north
+    [a d c b]] ;; south
+   )
 #+END_SRC
 
 Additionally, this node type also implements the =PSubdivide= protocol
@@ -134,7 +141,7 @@ defined in the [[http://thi.ng/geom][thi.ng/geom]] library.
    (let [ru (d/successive-nth 2 (m/norm-range cols))
          rv (d/successive-nth 2 (m/norm-range rows))
          rw (d/successive-nth 2 (m/norm-range slices))
-         map-p (fn [p] (->> p (unmap-uvw points) (map #(m/roundto % *eps*)) vec3))]
+         map-p (fn [p] (->> p (gu/map-trilinear points) (map #(m/roundto % *eps*)) vec3))]
      (for [[w1 w2] rw, [v1 v2] rv, [u1 u2] ru]
        (mapv map-p [[u1 v1 w1] [u1 v1 w2] [u2 v1 w2] [u2 v1 w1]
                     [u1 v2 w1] [u1 v2 w2] [u2 v2 w2] [u2 v2 w1]]))))
@@ -153,23 +160,17 @@ following constructor function can create a =BoxNode= in different
 ways:
 
 #+BEGIN_SRC clojure :noweb-ref node
-  (defn seed
+  (defn seed-box
     [x]
     (let [points (cond
                   (number? x) (g/vertices (a/aabb x))
-                  (sequential? x) (vec x)
+                  (sequential? x) (mapv vec3 x)
                   (satisfies? g/PVertexAccess x) (g/vertices x))]
       (BoxNode. points nil 0)))
 #+END_SRC
 
 ** Operators
 
-*** TODO POperator
-#+BEGIN_SRC clojure :noweb-ref operators
-  (defprotocol POperator
-    (operator-args [_] "Returns map of arguments supported/required by this op")
-    (apply-operator [_ node] "Applies op to node, returns seq of child nodes"))
-#+END_SRC
 
 Node operators are responsible for transforming a geometry node to
 manipulate its points and/or produce a number of child nodes. Through
@@ -288,7 +289,7 @@ implementations:
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :sd]
-    [node {:keys [args]}]
+    [^BoxNode node {:keys [args]}]
     (let [depth (inc (tree-depth node))]
       (->> (g/subdivide node args)
            (mapv #(BoxNode. % node depth)))))
@@ -319,14 +320,13 @@ five child nodes in the specified order:
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defn subdivide-inset___
-    [[a b c d e f g h :as points]
-     {i :inset dir :dir :or {i 0.1 dir :y}}]
+    [[a b c d e f g h :as points] {i :inset dir :dir :or {i 0.1 dir :y}}]
     (let [ii (- 1.0 i)
           map-points (fn [base uv]
                        (mapcat
                         (fn [[u v]]
-                          [(unmap-uvw points (assoc (vec3) uv [u v]))
-                           (unmap-uvw points (assoc base uv [u v]))])
+                          [(gu/map-trilinear points (assoc (vec3) uv [u v]))
+                           (gu/map-trilinear points (assoc base uv [u v]))])
                         [[i i] [i ii] [ii ii] [ii i]]))]
       (condp = dir
         :x (let [[a1 a2 b1 b2 c1 c2 d1 d2] (map-points v/V3X :yz)]
@@ -349,41 +349,39 @@ five child nodes in the specified order:
               [a1 a2 d2 d1 b1 b2 c2 c1]]))))
   
   (defn subdivide-inset
-    [[a b c d e f g h :as points]
-     {i :inset dir :dir :or {i 0.1 dir :y}}]
-    (let [inset #(q/inset-quad % i)]
-      (case dir
-        :x (let [[a2 b2 f2 e2] (inset [a b f e])
-                 [c2 d2 h2 g2] (inset [c d h g])]
-             [[b c d a b2 c2 d2 a2]
-              [f2 g2 h2 e2 f g h e]
-              [b c c2 b2 f g g2 f2]
-              [a2 d2 d a e2 h2 h e]
-              [b2 c2 d2 a2 f2 g2 h2 e2]])
-        :y (let [[a2 b2 c2 d2] (inset [a b c d])
-                 [e2 f2 g2 h2] (inset [e f g h])]
-             [[b2 b c c2 f2 f g g2]
-              [a a2 d2 d e e2 h2 h]
+    [[a b c d e f g h :as points] {i :inset dir :dir :or {i 0.1 dir :y}}]
+    (case dir
+      :x (let [[a2 b2 f2 e2] (q/inset-quad [a b f e] i)
+               [c2 d2 h2 g2] (q/inset-quad [c d h g] i)]
+           [[b c d a b2 c2 d2 a2]
+            [f2 g2 h2 e2 f g h e]
+            [b c c2 b2 f g g2 f2]
+            [a2 d2 d a e2 h2 h e]
+            [b2 c2 d2 a2 f2 g2 h2 e2]])
+      :y (let [[a2 b2 c2 d2] (q/inset-quad [a b c d] i)
+               [e2 f2 g2 h2] (q/inset-quad [e f g h] i)]
+           [[b2 b c c2 f2 f g g2]
+            [a a2 d2 d e e2 h2 h]
+            [a b b2 a2 e f f2 e2]
+            [d2 c2 c d h2 g2 g h]
+            [a2 b2 c2 d2 e2 f2 g2 h2]])
+      :z (let [[a2 d2 h2 e2] (q/inset-quad [a d h e] i)
+               [b2 c2 g2 f2] (q/inset-quad [b c g f] i)
+               p' [a2 b2 c2 d2 e2 f2 g2 h2]]
+           (if (some nil? p')
+             (do
+               ;;(prn points)
+               ;;(prn p')
+               ;;(prn "----")
+               [points])
+             [[a b c d a2 b2 c2 d2]
+              [e2 f2 g2 h2 e f g h]
               [a b b2 a2 e f f2 e2]
               [d2 c2 c d h2 g2 g h]
-              [a2 b2 c2 d2 e2 f2 g2 h2]])
-        :z (let [[a2 d2 h2 e2] (inset [a d h e])
-                 [b2 c2 g2 f2] (inset [b c g f])
-                 p' [a2 b2 c2 d2 e2 f2 g2 h2]]
-             (if (some nil? p')
-               (do
-                 ;;(prn points)
-                 ;;(prn p')
-                 ;;(prn "----")
-                 [points])
-               [[a b c d a2 b2 c2 d2]
-                [e2 f2 g2 h2 e f g h]
-                [a b b2 a2 e f f2 e2]
-                [d2 c2 c d h2 g2 g h]
-                [a2 b2 c2 d2 e2 f2 g2 h2]])))))
+              [a2 b2 c2 d2 e2 f2 g2 h2]]))))
   
   (defmethod operator [BoxNode :sd-inset]
-    [node {:keys [args]}]
+    [^BoxNode node {:keys [args]}]
     (let [depth (inc (tree-depth node))]
       (->> (subdivide-inset (:points node) args)
            (mapv #(BoxNode. % node depth)))))
@@ -404,12 +402,20 @@ five child nodes in the specified order:
 | =:len=     | Extrusion length                      | 1.0       |
 
 #+BEGIN_SRC clojure :noweb-ref operators
+  (defn- offset
+    [^thi.ng.geom.core.vector.Vec3 a ^thi.ng.geom.core.vector.Vec3 b ^double len]
+    (let [^thi.ng.geom.core.vector.Vec3 d (g/- a b)
+          m (/ len (g/mag d))]
+      (thi.ng.geom.core.vector.Vec3.
+       (mm/madd (.-x d) m (.-x a))
+       (mm/madd (.-y d) m (.-y a))
+       (mm/madd (.-z d) m (.-z a)))))
+  
   (defmethod operator [BoxNode :extrude]
-    [node {{:keys [dir len] :or {dir :n len 1.0}} :args}]
+    [^BoxNode node {{:keys [dir len] :or {dir :n len 1.0}} :args}]
     (let [c1 (gu/centroid (face-vertices node dir))
           c2 (gu/centroid (face-vertices node (face-opposite dir)))
           n (g/normalize (g/- c1 c2) len)]
-      ;;(prn dir n)
       [(BoxNode.
         (offset-face-points (:points node) dir n)
         node (inc (tree-depth node)))]))
@@ -419,19 +425,18 @@ five child nodes in the specified order:
      {{:keys [dir len] :or {dir :n len 1.0}} :args}]
     [(BoxNode.
       (case dir
-        :e [a b (g/+ c (g/normalize (g/- c b) len)) (g/+ d (g/normalize (g/- d a) len))
-            e f (g/+ g (g/normalize (g/- g f) len)) (g/+ h (g/normalize (g/- h e) len))]
-        :w [(g/+ a (g/normalize (g/- a d) len)) (g/+ b (g/normalize (g/- b c) len)) c d
-            (g/+ e (g/normalize (g/- e h) len)) (g/+ f (g/normalize (g/- f g) len)) g h]
-        :f [a (g/+ b (g/normalize (g/- b a) len)) (g/+ c (g/normalize (g/- c d) len)) d
-            e (g/+ f (g/normalize (g/- f e) len)) (g/+ g (g/normalize (g/- g h) len)) h]
-        :b [(g/+ a (g/normalize (g/- a b) len)) b c (g/+ d (g/normalize (g/- d c) len))
-            (g/+ e (g/normalize (g/- e f) len)) f g (g/+ h (g/normalize (g/- h g) len))]
-        :n [a b c d
-            (g/+ e (g/normalize (g/- e a) len)) (g/+ f (g/normalize (g/- f b) len))
-            (g/+ g (g/normalize (g/- g c) len)) (g/+ h (g/normalize (g/- h d) len))]
-        :s [(g/+ a (g/normalize (g/- a e) len)) (g/+ b (g/normalize (g/- b f) len))
-            (g/+ c (g/normalize (g/- c g) len)) (g/+ d (g/normalize (g/- d h) len))
+        :e [a b (offset c b len) (offset d a len)
+            e f (offset g f len) (offset h e len)]
+        :w [(offset a d len) (offset b c len) c d
+            (offset e h len) (offset f g len) g h]
+        :f [a (offset b a len) (offset c d len) d
+            e (offset f e len) (offset g h len) h]
+        :b [(offset a b len) b c (offset d c len)
+            (offset e f len) f g (offset h g len)]
+        :n [a b c d (offset e a len) (offset f b len)
+            (offset g c len) (offset h d len)]
+        :s [(offset a e len) (offset b f len)
+            (offset c g len) (offset d h len)
             e f g h])
       node (inc (tree-depth node)))])
 #+END_SRC
@@ -469,7 +474,7 @@ sides and returns the original node and the mirrored version.
      {{:keys [dir] :or {dir :n}} :args}]
     [node
      (BoxNode.
-      (condp = dir
+      (case dir
         :e (let [n (gu/ortho-normal c d g)]
              [d c (reflect-on-plane b c n) (reflect-on-plane a d n)
               h g (reflect-on-plane f g n) (reflect-on-plane e h n)])
@@ -512,8 +517,7 @@ sides and returns the original node and the mirrored version.
   (defmethod operator [BoxNode :scale-edge]
     [{[a b c d e f g h] :points :as node}
      {{:keys [edge sym scale len] :or {scale 0.5}} :args}]
-    (let [;;s (* scale 0.5)
-          scale-if (fn [sid p q s]
+    (let [scale-if (fn [sid p q s]
                      (if (= sid sym)
                        (let [c (g/mix p q)]
                          [(g/madd (g/- p c) s c) (g/madd (g/- q c) s c)])
@@ -523,12 +527,13 @@ sides and returns the original node and the mirrored version.
                         dpq (or len (* ll scale))
                         s (/ dpq ll)
                         c (g/mix p q)
-                        p' (g/madd (g/- p c) s c) q' (g/madd (g/- q c) s c)
+                        p' (g/madd (g/- p c) s c)
+                        q' (g/madd (g/- q c) s c)
                         [i j] (scale-if s1 i j (/ dpq (g/dist i j)))
                         [k l] (scale-if s2 k l (/ dpq (g/dist k l)))]
                     [p' q' i j k l]))]
       [(BoxNode.
-        (condp = edge
+        (case edge
           ;; bottom
           :ab (let [[a b c d e f] (scale a b :x c d :y e f)]
                 [a b c d e f g h])
@@ -731,6 +736,20 @@ sides and returns the original node and the mirrored version.
      :out (operator-output 2 out false)})
 #+END_SRC
 
+** Higher order operators
+
+#+BEGIN_SRC clojure :noweb-ref op-ctors  
+  (defn reflect-seq
+    "Takes a seq of direction keys and optional `leaf` tree. Builds a
+    tree encoding a nested reflection sequence in the order given. If
+    `leaf` is specified, injects it at the end of the nested
+    reflection."
+    [dirs & [leaf]]
+    (reduce
+      (fn [t dir] (reflect :dir dir :out [{} t])) (or leaf {})
+      (reverse dirs)))
+#+END_SRC
+
 ** Tree walking & node processing
 
 The following little function is truly at the heart of this library
@@ -746,26 +765,30 @@ transformation.
 *** TODO switch to using trampoline to avoid blowing stack for deep trees
 
 #+BEGIN_SRC clojure :noweb-ref tree-walk
+  (def ^:private kw-out :out)
+
+  (defn walk*
+    [node tree max-depth acc]
+    ;;(prn :d (tree-depth node) (:points node) tree)
+    (if (< (tree-depth node) max-depth)
+      (let [children (operator node tree)]
+        (if children
+          (->> children
+               (interleave (get tree kw-out))
+               (partition 2)
+               (reduce
+                (fn [acc [ctree c]]
+                  ;;(prn :c (:points c) :ctree ctree)
+                  (if ctree
+                    (walk* c ctree max-depth acc)
+                    acc))
+                acc))
+          (conj acc (g/faces node))))
+      (conj acc (g/faces node))))
+  
   (defn walk
-    ([seed tree] (walk seed tree 1e6 []))
-    ([seed tree max-depth] (walk seed tree max-depth []))
-    ([node tree max-depth acc]
-       ;;(prn :d (depth node) (:points node) tree)
-       (if (< (tree-depth node) max-depth)
-         (let [children (operator node tree)]
-           (if children
-             (->> children
-                  (interleave (:out tree))
-                  (partition 2)
-                  (reduce
-                   (fn [acc [ctree c]]
-                     ;;(prn :c (:points c) :ctree ctree)
-                     (if ctree
-                       (walk c ctree max-depth acc)
-                       acc))
-                   acc))
-             (conj acc (faces node))))
-         (conj acc (faces node)))))
+    ([seed tree] (walk* seed tree 1e6 []))
+    ([seed tree max-depth] (walk* seed tree max-depth [])))
 #+END_SRC
 
 ** Helper functions
@@ -787,32 +810,29 @@ transformation.
       :f [a (g/+ b n) (g/+ c n) d e (g/+ f n) (g/+ g n) h]
       :b [(g/+ a n) b c (g/+ d n) (g/+ e n) f g (g/+ h n)]))
 
-  (defn unmap-uvw
-    "Takes a seq of 8 points defining a box and vector of normalized
-    u,v,w coordinates. Applies trilinear interpolation to compute point
-    within the box:
-    u is coord along AD/BC edge, v along AE/BF, w along AB/DC."
-    [[a b c d e f g h] [u v w]]
-    (g/mix (g/mix a d e h u v) (g/mix b c f g u v) w))
-
   (defn child-path
     "Takes a seq of child indices and constructs a lookup path/vector
     for them by interleaving `:out` in the seq:
         (child-path [1 0 2]) => [:out 1 :out 0 :out 2]"
     [path] (vec (interleave (repeat :out) path)))
-
+  
+  (defn inject
+    "Almost like assoc-in, but transforms lookup path with `child-path`."
+    [t path t']
+    (assoc-in t (child-path path) t'))
+  
   (defn apply-recursively
     "Recursively injects tree into itself `n` times, starting at given
     child path. At each subsequent level, the original tree given is
     injected at index `id` of the `:out` child node vector. The initial
-    path is simply a seq of indices and will be translated into an
-    actual path using the `child-path` fn."
+    path is simply given as a seq of indices and will be translated into
+    an actual lookup path using the `child-path` fn."
     [tree n path id]
     (loop [t' tree, path (child-path path), n (dec n)]
       (if (pos? n)
         (recur (assoc-in t' path tree) (into path [:out id]) (dec n))
         t')))
-
+  
   (defn map-leaves
     "Takes a fn and operator tree, applies f to all leaf nodes. The fn
     must accept 3 args: the leaf's parent node, the child index of the
@@ -839,7 +859,7 @@ transformation.
     [n h wall]
     (let [theta (/ m/PI n)
           off (vec3 0 0 h)
-          points (g/vertices (g/rotate (g/as-polygon (c/circle) n) (- (- m/HALF_PI) theta)))
+          points (g/vertices (g/rotate (g/as-polygon (c/circle) n) (- (- HALF_PI) theta)))
           [b c] (map vec3 points)
           [a d] (map vec3 (p/inset-polygon points (- wall)))
           [f g] (map #(g/+ off %) [b c])
@@ -850,23 +870,33 @@ transformation.
     [n h inset wall]
     (let [theta (/ m/PI n)
           off (vec3 0 0 h)
-          points (g/vertices (g/rotate (g/as-polygon (c/circle) n) (- (- m/HALF_PI) theta)))
+          points (g/vertices (g/rotate (g/as-polygon (c/circle) n) (- (- HALF_PI) theta)))
           [b c] (map vec3 points)
           [a d] (map vec3 (p/inset-polygon points (- wall)))
           [f g] (map #(g/+ off %) (p/inset-polygon points (- inset)))
           [e h] (map #(g/+ off %) (p/inset-polygon points (- (- inset) wall)))]
       [b f g c a e h d]))
   
-  (defn csg-union-mesh
-    [meshes]
-    (->> meshes
-         (map csg/mesh->csg)
-         (reduce csg/union)
-         (csg/csg->mesh)))
+  (defn sphere-lat
+    [resu resv wall]
+    (let [r1 (- 1.0 wall)
+          lat2 (/ PI resv)
+          lat1 (- lat2)
+          lon2 (/ PI resu)
+          lon1 (- lon2)]
+      (->> [(vec3 r1 lat1 lon1)
+            (vec3 1 lat1 lon1)
+            (vec3 1 lat1 lon2)
+            (vec3 r1 lat1 lon2)
+            (vec3 r1 lat2 lon1)
+            (vec3 1 lat2 lon1)
+            (vec3 1 lat2 lon2)
+            (vec3 r1 lat2 lon2)]
+           (mapv g/as-cartesian))))
   
   (defn union-mesh
     ([meshes]
-       (union-mesh (gm/gmesh) meshes))
+       (union-mesh (bm/basic-mesh) meshes))
     ([target meshes]
        (reduce g/into target meshes)))
   
@@ -899,10 +929,10 @@ into a proper Clojure namespace...
      [thi.ng.geom.quad :as q]
      [thi.ng.geom.plane :as pl]
      [thi.ng.geom.aabb :as a]
-     [thi.ng.geom.gmesh :as gm]
-     [thi.ng.geom.mesh.csg :as csg]
+     [thi.ng.geom.cuboid :as cu]
+     [thi.ng.geom.basicmesh :as bm]
      [thi.ng.common.data.core :as d]
-     [thi.ng.common.math.core :as m :refer [*eps*]]
+     [thi.ng.common.math.core :as m :refer [*eps* TWO_PI PI HALF_PI]]
      ,#+clj [thi.ng.macromath.core :as mm]
      ,#+clj [thi.ng.geom.mesh.io :as mio]
      ,#+clj [clojure.java.io :as io]
