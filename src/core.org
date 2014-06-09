@@ -896,9 +896,12 @@ transformation.
   
   (defn union-mesh
     ([meshes]
-       (union-mesh (bm/basic-mesh) meshes))
-    ([target meshes]
-       (reduce g/into target meshes)))
+       (union-mesh (bm/basic-mesh) 1e-3 meshes))
+    ([target eps meshes]
+       (-> (reduce g/into target meshes)
+           (ops/canonicalize-vertices eps)
+           (first)
+           (ops/remove-internal)))) 
   
   ,#+clj
   (defn save-mesh
@@ -931,6 +934,7 @@ into a proper Clojure namespace...
      [thi.ng.geom.aabb :as a]
      [thi.ng.geom.cuboid :as cu]
      [thi.ng.geom.basicmesh :as bm]
+     [thi.ng.geom.mesh.ops :as ops]
      [thi.ng.common.data.core :as d]
      [thi.ng.common.math.core :as m :refer [*eps* TWO_PI PI HALF_PI]]
      ,#+clj [thi.ng.macromath.core :as mm]
