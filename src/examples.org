@@ -63,7 +63,7 @@ At some point these will be refactored and moved into core ns...
               :rows 3 :out {1 (mg/subdiv :cols 3 :out [nil {} nil])})
              module])))
   
-  (mg/save-mesh (mg/seed (a/aabb 1 0.5 1)) tree)
+  (mg/save-mesh (mg/seed-box (a/aabb 1 0.5 1)) tree)
 #+END_SRC
 
 ** Stripy module (heatsink?)
@@ -99,7 +99,7 @@ At some point these will be refactored and moved into core ns...
           so (mg/subdiv :rows 2 :out [(stripes* odd? 9)])]
       (mg/subdiv :cols 3 :slices 3 :out [se so se se nil se se so se])))
 
-  (mg/save-mesh (mg/seed (a/aabb 1 0.2 1)) tree)
+  (mg/save-mesh (mg/seed-box (a/aabb 1 0.2 1)) tree)
 #+END_SRC
 
 ** Hexagon hemisphere
@@ -130,10 +130,10 @@ various repetitive sub-transformations using simple functions.
       (mg/reflect :dir :s :out [(inject seed-clone) (inject reflected-hex)])))
 
   ;; apply to sphere lattice segment to form hemisphere
-  (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t)
+  (mg/save-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t)
 
   ;; apply to circle lattice segment to form flat structure
-  ;;(mg/save-mesh (mg/seed (mg/circle-lattice-seg 6 0.25 0.2)) t)
+  ;;(mg/save-mesh (mg/seed-box (mg/circle-lattice-seg 6 0.25 0.2)) t)
 #+END_SRC
 
 The example also includes a variation of the same tree applied to a
@@ -254,7 +254,7 @@ that the initial seed form/box!
            (mg/map-leaves (constantly skeleton)))))
   
   ;; apply to sphere lattice segment to form hemisphere
-  (mg/save-mesh (mg/seed (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree)
+  (mg/save-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree)
 #+END_SRC
 
 ** MIT Selfassembly module
@@ -289,7 +289,7 @@ that the initial seed form/box!
            (mg/subdiv
             :cols 2 :out [{} (mg/subdiv-inset :dir :x :inset 0.0055 :out {4 {}} :empty? true)])]))
 
-  (mg/save-mesh (mg/seed (a/aabb 1 0.2 0.2)) tree)
+  (mg/save-mesh (mg/seed-box (a/aabb 1 0.2 0.2)) tree)
 #+END_SRC
 ** TODO Extrusions & edge scaling
 
@@ -300,7 +300,7 @@ WIP, ignore...
     <<require-mg>>)
   
   (mg/save-mesh
-   (mg/seed (a/aabb 1))
+   (mg/seed-box (a/aabb 1))
    (mg/scale-edge
     :ad :z
     :out [(mg/scale-edge
