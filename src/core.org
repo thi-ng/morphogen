@@ -766,7 +766,7 @@ transformation.
 
 #+BEGIN_SRC clojure :noweb-ref tree-walk
   (def ^:private kw-out :out)
-
+  
   (defn walk*
     [node tree max-depth acc]
     ;;(prn :d (tree-depth node) (:points node) tree)
@@ -789,6 +789,48 @@ transformation.
   (defn walk
     ([seed tree] (walk* seed tree 1e6 []))
     ([seed tree max-depth] (walk* seed tree max-depth [])))
+#+END_SRC
+
+*** Operator tree flattening
+
+For UI or visualization purposes it is useful to obtain a flattened
+version of the operator tree. E.g. For the [[http://devartcodefactory.com][Co(de)Factory]] project we
+use color coding to produce a barcode overview of the operator tree of
+each created object. The functions =operator-seq= and
+=operator-seq-no-leaves= walk the tree in depth-first, pre-order and
+produce a seq of all operator IDs. Empty (deleted, =nil= nodes) and
+leaf nodes (without any operator) will be mapped to =:deleted= &
+=:leaf= respectively. =operator-seq-no-leaves= *only* includes nodes
+with actual operators, but no deletions or leaves.
+
+#+BEGIN_SRC clojure :noweb-ref tree-walk
+  (defn- operator-seq*
+    [f]
+    (fn opseq*
+      [acc node]
+      (reduce opseq* (f acc node) (:out node))))
+  
+  (defn operator-seq
+    [node]
+    (->> node
+         ((operator-seq*
+           (fn [acc node]
+             (conj! acc
+                    (cond
+                     (:op node)  (:op node)
+                     (nil? node) :delete
+                     :else       :leaf))))
+          (transient []))
+         (persistent!)))
+  
+  (defn operator-seq-no-leaves
+    [node]
+    (->> node
+         ((operator-seq*
+           (fn [acc node]
+             (if-let [op (:op node)] (conj! acc op) acc)))
+          (transient []))
+         (persistent!)))
 #+END_SRC
 
 ** Helper functions
