@@ -147,7 +147,7 @@ defined in the [[http://thi.ng/geom][thi.ng/geom]] library.
                     [u1 v2 w1] [u1 v2 w2] [u2 v2 w2] [u2 v2 w1]]))))
 #+END_SRC
 
-***** End of implementation
+***** End of implementation                                        :noexport:
 #+BEGIN_SRC clojure :noweb-ref node
   )
 #+END_SRC
@@ -752,8 +752,8 @@ sides and returns the original node and the mirrored version.
 
 ** Tree walking & node processing
 
-The following little function is truly at the heart of this library
-and is responsible for walking the operator tree, applying all
+The following little functions are truly at the heart of this library
+and responsible for walking the operator tree, applying all
 transformations and collecting mesh geometries from any leaf nodes.
 
 In order to help with debugging complex trees, but also to allow for
@@ -762,12 +762,10 @@ specified to stop further descending and consider nodes at this depth
 as leaves. This way it's also easy to create an animation of the tree
 transformation.
 
-*** TODO switch to using trampoline to avoid blowing stack for deep trees
-
 #+BEGIN_SRC clojure :noweb-ref tree-walk
   (def ^:private kw-out :out)
   
-  (defn walk*
+  (defn- walk*
     [node tree max-depth acc]
     ;;(prn :d (tree-depth node) (:points node) tree)
     (if (< (tree-depth node) max-depth)
@@ -786,29 +784,87 @@ transformation.
   (defn walk
     ([seed tree] (walk seed tree 1e6))
     ([seed tree max-depth] (persistent! (walk* seed tree max-depth (transient [])))))
+#+END_SRC
+
+*** Caching operator results
+
+Some use cases require access to the complete computed state of the
+operator tree. E.g. In an interactive editor built around *morphogen*,
+a user might want to manipulate the resulting object only at deeper
+levels of the hierarchy. In this case it might be prohibitive from a
+performance POV to recompute the entire operator tree, if actually
+only the nodes below (and including) the edit point are impacted. The
+=compute-tree-map= function addresses this and is meant as an
+initialization step. It walks the tree in the same way as the =walk=
+function above. However, instead of returning a seq of face lists of
+the resulting meshes of all leaf nodes, this function produces a map
+of *all* computed geometry nodes, each with its path (cursor) into the
+operator tree as key.
+
+For example using this operator tree:
+
+#+BEGIN_SRC clojure
+  {:op :sd,
+   :args {:cols 2},
+   :out [{:op :reflect, :args {:dir :n}, :out [nil {}]} {}]}
+#+END_SRC
+
+...produces a map like this (node =:parent= keys elided for simplicity):
+
+#+BEGIN_SRC clojure
+  {[]    {:points [...] :depth 0}
+   [0]   {:points [...] :depth 1}
+   [0 0] {:points [...] :depth 2}
+   [0 1] {:points [...] :depth 2}
+   [1]   {:points [...] :depth 1}}
+#+END_SRC
+
+Note, that the map retains geometry nodes also for deleted children.
+In the example tree, the first child of the =:reflect= operator should
+be removed, however its geometry node is kept in the map for cases
+when a user wants to replace the delete op with another operator later
+on. This would not be easily possible if such nodes would be excluded
+from this map. Because of this, and in order to find out if a node in
+this map should produce geometry in the final result mesh, it is
+necessary to consult the operator tree at the cursor position for each
+mapped node. This can be easily done via a checks using the following
+helper function, which given an operator tree, classifies node cursors
+as =:operator=, =:leaf= or =nil= (the latter for deleted nodes so that
+the fn can be used as predicate).
+
+#+BEGIN_SRC clojure :noweb-ref helpers
+  (defn classify-node-at
+    [op-tree cursor]
+    (let [n (get-in op-tree (child-path cursor))]
+      (cond
+       (:op n) :operator
+       n :leaf
+       :else nil)))
+#+END_SRC
+
+Next up, the actual implementation of =compute-tree-map=:
+
+#+BEGIN_SRC clojure :noweb-ref tree-walk
+  (defn- compute-tree-map*
+    [node tree acc path]
+    (let [children (operator node tree)]
+      (if children
+        (loop [acc (assoc! acc path node), children children, out (get tree kw-out), i 0]
+          (if (and out children)
+            (let [c (first children)
+                  ctree (first out)
+                  (conj path i)]
+              (recur
+               (if ctree
+                 (compute-tree-map* c ctree acc cpath)
+                 (assoc! acc cpath c))
+               (next children) (next out) (inc i)))
+            acc))
+        (assoc! acc path node))))
   
-  (defn walk-with-path*
-    [node tree max-depth acc path]
-    ;;(prn :d (tree-depth node) (:points node) tree)
-    (if (< (tree-depth node) max-depth)
-      (let [children (operator node tree)]
-        (if children
-          (loop [acc acc, children children, out (get tree kw-out), i 0]
-            (if (and out children)
-              (let [ctree (first out)]
-                (recur
-                 (if ctree
-                   (walk-with-path* (first children) ctree max-depth acc (conj path i))
-                   acc)
-                 (next children) (next out) (inc i)))
-              acc))
-          (conj! acc [path (g/faces node)])))
-      (conj! acc [path (g/faces node)])))
-  
-  (defn walk-with-path
-    ([seed tree] (walk-with-path seed tree 1e6))
-    ([seed tree max-depth]
-       (persistent! (walk-with-path* seed tree max-depth (transient []) []))))
+  (defn compute-tree-map
+    [seed tree]
+    (persistent! (compute-tree-map* seed tree (transient {}) [])))
 #+END_SRC
 
 *** Operator tree flattening
@@ -977,7 +1033,7 @@ with actual operators, but no deletions or leaves.
               (mio/write-ply o)))))
 #+END_SRC
 
-** Complete namespace
+** Complete namespace                                              :noexport:
 
 With all elements in place now, we only need to bundle them all up
 into a proper Clojure namespace...
@@ -1021,10 +1077,4 @@ into a proper Clojure namespace...
   
   <<meshing>>
 #+END_SRC
-
-* TODOs
-
-- add octree mesh for snapping verts
-- scale-edge op should produce planar results (or add as new op)
-- add desc for side IDs (east/west ...)
 
