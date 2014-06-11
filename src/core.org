@@ -853,7 +853,7 @@ Next up, the actual implementation of =compute-tree-map=:
           (if (and out children)
             (let [c (first children)
                   ctree (first out)
-                  (conj path i)]
+                  cpath (conj path i)]
               (recur
                (if ctree
                  (compute-tree-map* c ctree acc cpath)
@@ -1061,7 +1061,7 @@ into a proper Clojure namespace...
      ,#+clj [clojure.pprint :refer [pprint]]
      ))
   
-  (declare operator)
+  (declare operator child-path)
   
   <<helpers>>
   
