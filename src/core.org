@@ -115,6 +115,12 @@ in order to produce outward facing face normals.
      :f [b c g f]
      :b [d a e h]))
   (face-topology [_] 4)
+
+  g/PBounds
+  (bounds [_] (tu/bounding-box (:points _)))
+  (width  [_] (gu/axis-range 0 (:points _)))
+  (height [_] (gu/axis-range 1 (:points _)))
+  (depth  [_] (gu/axis-range 2 (:points _)))
   
   g/PVertexAccess
   (vertices [_] points)
@@ -1045,6 +1051,7 @@ into a proper Clojure namespace...
      [thi.ng.geom.core :as g]
      [thi.ng.geom.core.vector :as v :refer [vec3]]
      [thi.ng.geom.core.utils :as gu]
+     [thi.ng.geom.types.utils :as tu]
      [thi.ng.geom.circle :as c]
      [thi.ng.geom.polygon :as p]
      [thi.ng.geom.quad :as q]
