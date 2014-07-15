@@ -845,7 +845,7 @@ the fn can be used as predicate).
 Next up, the actual implementation of =compute-tree-map=:
 
 #+BEGIN_SRC clojure :noweb-ref tree-walk
-  (defn- compute-tree-map*
+  (defn compute-tree-map*
     [node tree acc path]
     (let [children (operator node tree)]
       (if children
@@ -1019,7 +1019,7 @@ with actual operators, but no deletions or leaves.
        (-> (reduce g/into target meshes)
            (ops/canonicalize-vertices eps)
            (first)
-           (ops/remove-internal)))) 
+           (ops/remove-internal))))
   
   ,#+clj
   (defn save-mesh
