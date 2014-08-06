@@ -81,7 +81,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-2202"]
+[org.clojure/clojurescript "0.0-2280"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
@@ -107,7 +107,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/lynaghk/cljx][Cljx]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljx
-[com.keminglabs/cljx "0.3.2"]
+[com.keminglabs/cljx "0.4.0"]
 #+END_SRC
 **** [[https://github.com/hugoduncan/criterium][Criterium]]
 #+BEGIN_SRC clojure :noweb-ref dep-criterium
@@ -115,7 +115,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/cemerick/clojurescript.test][clojurescript.test]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs-test
-[com.cemerick/clojurescript.test "0.2.2"]
+[com.cemerick/clojurescript.test "0.3.1"]
 #+END_SRC
 **** [[https://github.com/emezeske/lein-cljsbuild][Cljsbuild]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljsbuild
