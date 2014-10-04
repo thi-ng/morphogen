@@ -415,7 +415,7 @@ five child nodes in the specified order:
       (thi.ng.geom.core.vector.Vec3.
        (mm/madd (.-x d) m (.-x a))
        (mm/madd (.-y d) m (.-y a))
-       (mm/madd (.-z d) m (.-z a)))))
+       (mm/madd (.-z d) m (.-z a)) -1 #+clj -1)))
   
   (defmethod operator [BoxNode :extrude]
     [^BoxNode node {{:keys [dir len] :or {dir :n len 1.0}} :args}]
@@ -473,7 +473,7 @@ sides and returns the original node and the mirrored version.
       (thi.ng.geom.core.vector.Vec3.
        (+ (mm/msub (.-x n) d (.-x r)) (.-x q))
        (+ (mm/msub (.-y n) d (.-y r)) (.-y q))
-       (+ (mm/msub (.-z n) d (.-z r)) (.-z q)))))
+       (+ (mm/msub (.-z n) d (.-z r)) (.-z q)) -1 #+clj -1)))
   
   (defmethod operator [BoxNode :reflect]
     [{[a b c d e f g h] :points :as node}
