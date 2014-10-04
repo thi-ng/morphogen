@@ -1,0 +1,64 @@
+#+SETUPFILE: "setup.org"
+
+* Namespace: thi.ng.morphogen.lux
+
+** Luxrender base scene
+
+#+BEGIN_SRC clojure :noweb-ref lxs
+  (def base-scene
+    (-> (lux/lux-scene)
+        (lux/configure-meshes-as-byte-arrays)
+        (lux/renderer-sampler)
+        (lux/sampler-ld {})
+        (lux/integrator-bidir {})
+        (lux/camera
+         {:eye [0 1 -1] :target [0 0.5 -2] :up [0 1 0] :fov 90})
+        (lux/film
+         {:width 640 :height 360
+          :response :agfacolor-optima2-200cd
+          :display-interval 5 :halt-spp 1000})
+        (lux/tonemap-linear
+         {:iso 100 :exposure 0.95 :f-stop 2.8 :gamma 2.2})
+        (lux/material-matte
+         :basic {:diffuse [0.64 0.622 0.615]})
+        (lux/material-glossy-coating
+         :gloss {:ior :plastic :specular [1 1 1] :base :basic})
+        (lux/light-groups {:top {:gain 0.2} :fill {:gain 0.05}})
+        (lux/area-light :top   {:n [0 -1 0] :size [6 2] :group :top :tx {:translate [0 2 -2] :rx 30}})
+        (lux/area-light :left  {:n [1 0 0] :size 0.5 :group :fill :tx {:translate [-1.5 1 -1] :ry 30 :rz -20}})
+        (lux/area-light :right {:n [-1 0 0] :size 0.5 :group :fill :tx {:translate [1.5 1 -1] :ry -30 :rz 20}})
+        (lux/ply-mesh
+         :room {:material :basic
+                :mesh (luxprim/infinity-curve 6 2 4 0.5 0.75 0.05 4)})
+        (lux/stl-mesh
+         :box {:material :gloss :mesh (last (take 6 (iterate sd/catmull-clark (g/as-mesh (g/center (a/aabb 1))))))
+               :tx {:translate [0 0.5 -2] :ry 30}})))
+#+END_SRC
+
+** Render scene generator
+
+#+BEGIN_SRC clojure :noweb-ref generator
+
+#+END_SRC
+
+** Complete namespace                                              :noexport:
+
+#+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/lux.clj :noweb yes :mkdirp yes :padline no
+  (ns thi.ng.morphogen.lux
+    (:require
+     [thi.ng.geom.core :as g]
+     [thi.ng.geom.core.vector :as v :refer [vec3]]
+     [thi.ng.geom.basicmesh :as bm]
+     [thi.ng.geom.aabb :as a]
+     [thi.ng.geom.mesh.subdivision :as sd]
+     [thi.ng.luxor.core :as lux]
+     [thi.ng.luxor.io :as lio]
+     [thi.ng.luxor.primitives :as luxprim]
+     [thi.ng.common.math.core :as m :refer [*eps* TWO_PI PI HALF_PI]]
+     [clojure.pprint :refer [pprint]]))
+
+  <<lxs>>
+
+  <<generator>>  
+#+END_SRC
+
