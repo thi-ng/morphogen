@@ -989,7 +989,7 @@ with actual operators, but no deletions or leaves.
           [f g] (map #(g/+ off %) [b c])
           [e h] (map #(g/+ off %) [a d])]
       [b f g c a e h d]))
-  
+
   (defn sphere-lattice-seg
     [n h inset wall]
     (let [theta (/ m/PI n)
@@ -1000,7 +1000,7 @@ with actual operators, but no deletions or leaves.
           [f g] (map #(g/+ off %) (p/inset-polygon points (- inset)))
           [e h] (map #(g/+ off %) (p/inset-polygon points (- (- inset) wall)))]
       [b f g c a e h d]))
-  
+
   (defn sphere-lat
     [resu resv wall]
     (let [r1 (- 1.0 wall)
@@ -1017,7 +1017,7 @@ with actual operators, but no deletions or leaves.
             (vec3 1 lat2 lon2)
             (vec3 r1 lat2 lon2)]
            (mapv g/as-cartesian))))
-  
+
   (defn union-mesh
     ([meshes]
        (union-mesh (bm/basic-mesh) 1e-3 meshes))
@@ -1026,15 +1026,18 @@ with actual operators, but no deletions or leaves.
            (ops/canonicalize-vertices eps)
            (first)
            (ops/remove-internal))))
-  
+
+  (defn generate-mesh
+    ([seed tree] (generate-mesh seed tree 1e6))
+    ([seed tree max-depth] (union-mesh (walk seed tree max-depth))))
+
   ,#+clj
   (defn save-mesh
     ([seed tree] (save-mesh seed tree "p.ply" 1e6))
     ([seed tree path] (save-mesh seed tree path 1e6))
     ([seed tree path max-depth]
        (with-open [o (io/output-stream path)]
-         (->> (walk seed tree max-depth)
-              (union-mesh)
+         (->> (generate-mesh seed tree max-depth)
               (g/tessellate)
               (mio/write-ply o)))))
 #+END_SRC
