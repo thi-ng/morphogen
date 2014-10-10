@@ -81,7 +81,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-2280"]
+[org.clojure/clojurescript "0.0-2322"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
@@ -107,7 +107,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/lynaghk/cljx][Cljx]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljx
-[com.keminglabs/cljx "0.4.0"]
+[org.clojars.cemerick/cljx "0.5.0-SNAPSHOT"]
 #+END_SRC
 **** [[https://github.com/hugoduncan/criterium][Criterium]]
 #+BEGIN_SRC clojure :noweb-ref dep-criterium
@@ -186,45 +186,58 @@ REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
 ** Leiningen project file                                          :noexport:
 #+BEGIN_SRC clojure :tangle ../babel/project.clj :noweb yes :mkdirp yes :padline no
   (defproject thi.ng/morphogen "<<version>>"
-    :description "3d form evolution through tree-based transformations"
-    :url "<<project-url>>"
-    :license {:name "Apache Software License 2.0"
-              :url "http://www.apache.org/licenses/LICENSE-2.0"}
+    :description  "3d form evolution through tree-based transformations"
+    :url          "<<project-url>>"
+    :license      {:name "Apache Software License 2.0"
+                   :url "http://www.apache.org/licenses/LICENSE-2.0"
+                   :distribution :repo}
+    :scm          {:name "git"
+                   :url "git@github.com:thi-ng/morphogen.git"}
+
+    :min-lein-vesion "2.4.0"
+
     :dependencies [<<dep-clj>>
                    <<dep-geom>>]
-  
+
     :source-paths ["src/cljx"]
-    :test-paths ["<<gen-test-path>>"]
-  
-    :profiles {:dev {:dependencies [<<dep-luxor>>
-                                    <<dep-cljs>>
-                                    <<dep-criterium>>]
-                     :plugins [<<dep-cljx>>
-                               <<dep-cljsbuild>>
-                               <<dep-cljs-test>>
-                               <<dep-austin>>]
-                     :hooks [cljx.hooks]
-                     :aliases {"cleantest" ["do" "clean," "test," "cljsbuild" "test"]}}}
-  
-    :cljx {:builds [{:source-paths ["src/cljx"]
-                     :output-path "<<gen-source-path>>"
-                     :rules :clj}
-                    {:source-paths ["src/cljx"]
-                     :output-path "<<gen-source-path>>"
-                     :rules :cljs}
-                    {:source-paths ["test/cljx"]
-                     :output-path "<<gen-test-path>>"
-                     :rules :clj}
-                    {:source-paths ["test/cljx"]
-                     :output-path "<<gen-test-path>>"
-                     :rules :cljs}]}
-  
-    :cljsbuild {:builds [{:source-paths ["<<gen-source-path>>" "<<gen-test-path>>"]
-                          :id "simple"
-                          :compiler {:output-to "<<cljs-artefact-path>>"
-                                     :optimizations :whitespace
-                                     :pretty-print true}}]
-                :test-commands {"unit-tests" ["phantomjs" :runner "<<cljs-artefact-path>>"]}})
+    :test-paths   ["<<gen-test-path>>"]
+
+    :profiles     {:dev {:dependencies [<<dep-luxor>>
+                                        <<dep-cljs>>
+                                        <<dep-criterium>>]
+                         :plugins [<<dep-cljx>>
+                                   <<dep-cljsbuild>>
+                                   <<dep-cljs-test>>]
+                         :global-vars {*warn-on-reflection* true}
+                         :jvm-opts ^:replace []
+                         :auto-clean false
+                         :prep-tasks [["cljx" "once"] "javac" "compile"]
+                         :aliases {"cleantest" ["do" "clean" ["test" ":all"] ["cljsbuild" "test"]]}}}
+
+    :cljx         {:builds [{:source-paths ["src/cljx"]
+                             :output-path "<<gen-source-path>>"
+                             :rules :clj}
+                            {:source-paths ["src/cljx"]
+                             :output-path "<<gen-source-path>>"
+                             :rules :cljs}
+                            {:source-paths ["test/cljx"]
+                             :output-path "<<gen-test-path>>"
+                             :rules :clj}
+                            {:source-paths ["test/cljx"]
+                             :output-path "<<gen-test-path>>"
+                             :rules :cljs}]}
+
+    :cljsbuild    {:builds [{:source-paths ["<<gen-source-path>>" "<<gen-test-path>>"]
+                             :id "simple"
+                             :compiler {:output-to "<<cljs-artefact-path>>"
+                                        :optimizations :whitespace
+                                        :pretty-print true}}]
+                   :test-commands {"unit-tests" ["phantomjs" :runner "<<cljs-artefact-path>>"]}}
+
+    :pom-addition [:developers [:developer {:id "toxi"}
+                                  [:name "Karsten Schmidt"]
+                                  [:url "http://postspectacular.com"]
+                                  [:timezone "0"]]])
 #+END_SRC
 
 ** ClojureScript HTML harness                                      :noexport:
@@ -257,7 +270,7 @@ symbol =version= holding the version string defined above:
 #+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/version.cljx :noweb yes :mkdirp yes :padline no :exports none
   (ns thi.ng.morphogen.version)
 
-  (def ^:const version "<<version>>")
+  (def version "<<version>>")
 #+END_SRC
 
 * Modules
