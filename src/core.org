@@ -409,14 +409,17 @@ five child nodes in the specified order:
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defn- offset
-    [^thi.ng.geom.core.vector.Vec3 a ^thi.ng.geom.core.vector.Vec3 b ^double len]
+    [^thi.ng.geom.core.vector.Vec3 a b len]
     (let [^thi.ng.geom.core.vector.Vec3 d (g/- a b)
-          m (/ len (g/mag d))]
-      (thi.ng.geom.core.vector.Vec3.
-       (mm/madd (.-x d) m (.-x a))
-       (mm/madd (.-y d) m (.-y a))
-       (mm/madd (.-z d) m (.-z a)) -1 #+clj -1)))
-  
+          m (/ len (g/mag d))
+          ^doubles ba (.-buf a)
+          ^doubles bd (.-buf d)
+          ^doubles dest #+clj (double-array 3) #+cljs (js/Float32Array. 3)]
+      (aset dest 0 (double (mm/madd (aget bd 0) m (aget ba 0))))
+      (aset dest 1 (double (mm/madd (aget bd 1) m (aget ba 1))))
+      (aset dest 2 (double (mm/madd (aget bd 2) m (aget ba 2))))
+      (thi.ng.geom.core.vector.Vec3. dest nil nil)))
+
   (defmethod operator [BoxNode :extrude]
     [^BoxNode node {{:keys [dir len] :or {dir :n len 1.0}} :args}]
     (let [c1 (gu/centroid (face-vertices node dir))
@@ -425,7 +428,7 @@ five child nodes in the specified order:
       [(BoxNode.
         (offset-face-points (:points node) dir n)
         node (inc (tree-depth node)))]))
-  
+
   (defmethod operator [BoxNode :ext-prop]
     [{[a b c d e f g h] :points :as node}
      {{:keys [dir len] :or {dir :n len 1.0}} :args}]
@@ -465,16 +468,18 @@ sides and returns the original node and the mirrored version.
   (defn reflect-on-plane
     "Reflects point p on plane defined by point q & normal n.
     Normal vector must be normalized."
-    [^thi.ng.geom.core.vector.Vec3 p
-     ^thi.ng.geom.core.vector.Vec3 q
-     ^thi.ng.geom.core.vector.Vec3 n]
+    [p ^thi.ng.geom.core.vector.Vec3 q ^thi.ng.geom.core.vector.Vec3 n]
     (let [^thi.ng.geom.core.vector.Vec3 r (g/- q p)
-          d (* (g/dot r n) 2.0)]
-      (thi.ng.geom.core.vector.Vec3.
-       (+ (mm/msub (.-x n) d (.-x r)) (.-x q))
-       (+ (mm/msub (.-y n) d (.-y r)) (.-y q))
-       (+ (mm/msub (.-z n) d (.-z r)) (.-z q)) -1 #+clj -1)))
-  
+          d (* (g/dot r n) 2.0)
+          ^doubles bn (.-buf n)
+          ^doubles br (.-buf r)
+          ^doubles bq (.-buf q)
+          ^doubles dest #+clj (double-array 3) #+cljs (js/Float32Array. 3)]
+      (aset dest 0 (double (+ (mm/msub (aget bn 0) d (aget br 0)) (aget bq 0))))
+      (aset dest 1 (double (+ (mm/msub (aget bn 1) d (aget br 1)) (aget bq 1))))
+      (aset dest 2 (double (+ (mm/msub (aget bn 2) d (aget br 2)) (aget bq 2))))
+      (thi.ng.geom.core.vector.Vec3. dest nil nil)))
+
   (defmethod operator [BoxNode :reflect]
     [{[a b c d e f g h] :points :as node}
      {{:keys [dir] :or {dir :n}} :args}]
@@ -502,7 +507,6 @@ sides and returns the original node and the mirrored version.
              [(reflect-on-plane b a n) a d (reflect-on-plane c d n)
               (reflect-on-plane f e n) e h (reflect-on-plane g h n)]))
       node (inc (tree-depth node)))])
-  
 #+END_SRC
 
 *** Scale edge
@@ -1049,7 +1053,9 @@ into a proper Clojure namespace...
 
 #+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/core.cljx :noweb yes :mkdirp yes :padline no
   (ns thi.ng.morphogen.core
-    ,#+cljs (:require-macros [thi.ng.macromath.core :as mm])
+    ,#+cljs
+    (:require-macros
+     [thi.ng.macromath.core :as mm])
     (:require
      [thi.ng.geom.core :as g]
      [thi.ng.geom.core.vector :as v :refer [vec3]]
@@ -1070,21 +1076,21 @@ into a proper Clojure namespace...
      ,#+clj [clojure.java.io :as io]
      ,#+clj [clojure.pprint :refer [pprint]]
      ))
-  
+
   (declare operator child-path)
-  
+
   <<helpers>>
-  
+
   <<proto>>
-  
+
   <<node>>
-  
+
   <<operators>>
-  
+
   <<op-ctors>>
-  
+
   <<tree-walk>>
-  
+
   <<meshing>>
 #+END_SRC
 
