@@ -56,8 +56,8 @@ be run from the REPL and export meshes in Stanford PLY format.
 
 This project is open source and licensed under the [[http://www.apache.org/licenses/LICENSE-2.0][Apache Software License 2.0]].
 
-** Injected properties                                             :noexport:
-#+BEGIN_SRC clojure :exports none :noweb-ref version
+** Injected properties
+#+BEGIN_SRC clojure :noweb-ref version
 0.1.0-SNAPSHOT
 #+END_SRC
 #+BEGIN_SRC clojure :exports none :noweb-ref project-url
@@ -81,7 +81,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-2322"]
+[org.clojure/clojurescript "0.0-2657"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
@@ -101,13 +101,9 @@ target/morphogen-<<version>>.js
 #+BEGIN_SRC clojure :noweb-ref dep-luxor
 [thi.ng/luxor "0.3.0-SNAPSHOT"]
 #+END_SRC
-**** [[https://github.com/cemerick/austin][Austin]]
-#+BEGIN_SRC clojure :noweb-ref dep-austin
-[com.cemerick/austin "0.1.4"]
-#+END_SRC
 **** [[https://github.com/lynaghk/cljx][Cljx]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljx
-[org.clojars.cemerick/cljx "0.5.0-SNAPSHOT"]
+[com.keminglabs/cljx "0.5.0"]
 #+END_SRC
 **** [[https://github.com/hugoduncan/criterium][Criterium]]
 #+BEGIN_SRC clojure :noweb-ref dep-criterium
@@ -115,11 +111,11 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/cemerick/clojurescript.test][clojurescript.test]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs-test
-[com.cemerick/clojurescript.test "0.3.1"]
+[com.cemerick/clojurescript.test "0.3.3"]
 #+END_SRC
 **** [[https://github.com/emezeske/lein-cljsbuild][Cljsbuild]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljsbuild
-[lein-cljsbuild "1.0.3"]
+[lein-cljsbuild "1.0.4"]
 #+END_SRC
 
 ** Contributors
@@ -212,7 +208,7 @@ REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
                          :jvm-opts ^:replace []
                          :auto-clean false
                          :prep-tasks [["cljx" "once"] "javac" "compile"]
-                         :aliases {"cleantest" ["do" "clean" ["test" ":all"] ["cljsbuild" "test"]]}}}
+                         :aliases {"cleantest" ["do" "clean," "cljx" "once," "test," "cljsbuild" "test"]}}}
 
     :cljx         {:builds [{:source-paths ["src/cljx"]
                              :output-path "<<gen-source-path>>"
@@ -242,7 +238,7 @@ REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
 
 ** ClojureScript HTML harness                                      :noexport:
 #+BEGIN_SRC html :tangle ../babel/index.html :noweb yes :mkdirp yes :padline no
-  <!DOCTYPE html5>
+  <!DOCTYPE html>
   <html lang="en">
     <head>
       <title><<lein-coords>> test</title>
@@ -273,18 +269,10 @@ symbol =version= holding the version string defined above:
   (def version "<<version>>")
 #+END_SRC
 
-* Modules
+* Namespaces
 
-*** Note for Github users
-
-The following sections contain links to project modules, but are not
-visibile when reading this file on Github. Please navigate to the
-source files via the normal [[https://github.com/thi.ng/morphogen/tree/master/][GH repo browser]].
-
-** Core API
-
-#+INCLUDE: "core.org" :minlevel 2
+- [[./core.org][thi.ng.morphogen.core]]
+- [[./examples.org][examples]]
 
 * Tests
 
-#+INCLUDE: "../test/core.org" :minlevel 2

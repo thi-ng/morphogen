@@ -121,13 +121,13 @@ various repetitive sub-transformations using simple functions.
 
   (def t
     "Arrangement of 10 hexagons as sequence of nested reflections."
-    (let [hex (mg/apply-recursively (mg/reflect :dir :e) 5 [1] 1)
-          reflected-hex (mg/reflect :dir :n :out [{} hex])
+    (let [hex (mg/apply-recursively (mg/reflect :e) 5 [1] 1)
+          reflected-hex (mg/reflect :n :out [{} hex])
           inject #(-> hex
                       (assoc-in (mg/child-path [1 1 0]) %)
                       (assoc-in (mg/child-path [1 1 1 1 0]) %))
-          seed-clone (mg/reflect :dir :s :out [{} (inject reflected-hex)])]
-      (mg/reflect :dir :s :out [(inject seed-clone) (inject reflected-hex)])))
+          seed-clone (mg/reflect :s :out [{} (inject reflected-hex)])]
+      (mg/reflect :s :out [(inject seed-clone) (inject reflected-hex)])))
 
   ;; apply to sphere lattice segment to form hemisphere
   (mg/save-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t)
@@ -180,7 +180,7 @@ that the initial seed form/box!
     and then forms ring using last column by recursively reflecting it
     `n` times."
     [dir edge1 edge2 ring-child-id n]
-    (let [ring (mg/apply-recursively (mg/reflect :dir :n) n [1] 1)]
+    (let [ring (mg/apply-recursively (mg/reflect :n) n [1] 1)]
       (mg/extrude
        :dir dir :len 0.1
        :out
@@ -233,12 +233,12 @@ that the initial seed form/box!
     attaches antennas to all 60 segments. These are injected using the
     `map-leaves` function which replaces all leaf nodes in the tree with
     a new subtree."
-    (let [hex (mg/apply-recursively (mg/reflect :dir :e) 5 [1] 1)
-          refl-hex (mg/reflect :dir :n :out [{} hex])
+    (let [hex (mg/apply-recursively (mg/reflect :e) 5 [1] 1)
+          refl-hex (mg/reflect :n :out [{} hex])
           inject #(-> hex
                       (assoc-in (mg/child-path [1 1 0]) %)
                       (assoc-in (mg/child-path [1 1 1 1 0]) %))
-          seed-clone (mg/reflect :dir :s :out {1 (inject refl-hex)})
+          seed-clone (mg/reflect :s :out {1 (inject refl-hex)})
           inset 0.03
           skeleton (hollow-out
                     :y inset false
@@ -250,7 +250,7 @@ that the initial seed form/box!
                             (hollow-out :z inset)])
                      (hollow-out :x inset)
                      (hollow-out :x inset)])]
-      (->> (mg/reflect :dir :s :out [(inject seed-clone) (inject refl-hex)])
+      (->> (mg/reflect :s :out [(inject seed-clone) (inject refl-hex)])
            (mg/map-leaves (constantly skeleton)))))
   
   ;; apply to sphere lattice segment to form hemisphere
@@ -304,7 +304,7 @@ WIP, ignore...
    (mg/scale-edge
     :ad :z
     :out [(mg/scale-edge
-           :ab :y :out [(mg/reflect :dir :e :out [{} (mg/reflect :dir :e)])])]))
+           :ab :y :out [(mg/reflect :e :out [{} (mg/reflect :e)])])]))
 #+END_SRC
 ** TODO different node types
 

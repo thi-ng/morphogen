@@ -192,6 +192,7 @@ The following operators are currently implemented:
 | Subdivision       | =:sd=         | Regular subdivision resulting in self-similar children                     |
 | Inset subdivision | =:sd-inset=   | Subdivision through insetting along an axis                                |
 | Reflection        | =:reflect=    | Reflection of entire node on one of its sides                              |
+| Replication       | =:replicate=  | Replication of entire node on one of its sides                             |
 | Extrusion         | =:extrude=    | Extrusion of the node along the normal of one of its sides                 |
 | Scale edge(s)     | =:scale-edge= | Scale an edge and set its symmetric opposite (in X, Y or Z) to same length |
 
@@ -509,6 +510,54 @@ sides and returns the original node and the mirrored version.
       node (inc (tree-depth node)))])
 #+END_SRC
 
+*** Replication
+
+
+#+BEGIN_SRC clojure :noweb-ref operators
+  (defmethod operator [BoxNode :replicate]
+    [{[a b c d e f g h] :points :as node} {{:keys [dir] :or {dir :n}} :args}]
+    [node
+     (BoxNode.
+      (case dir
+        :f (let [ba (g/- b a)
+                 cd (g/- c d)
+                 fe (g/- f e)
+                 gh (g/- g h)]
+             [(g/+ a ba) (g/+ b ba) (g/+ c cd) (g/+ d cd)
+              (g/+ e fe) (g/+ f fe) (g/+ g gh) (g/+ h gh)])
+        :b (let [ab (g/- a b)
+                 dc (g/- d c)
+                 ef (g/- e f)
+                 hg (g/- h g)]
+             [(g/+ a ab) (g/+ b ab) (g/+ c dc) (g/+ d dc)
+              (g/+ e ef) (g/+ f ef) (g/+ g hg) (g/+ h hg)])
+        :n (let [ea (g/- e a)
+                 fb (g/- f b)
+                 gc (g/- g c)
+                 hd (g/- h d)]
+             [(g/+ a ea) (g/+ b fb) (g/+ c gc) (g/+ d hd)
+              (g/+ e ea) (g/+ f fb) (g/+ g gc) (g/+ h hd)])
+        :s (let [ae (g/- a e)
+                 bf (g/- b f)
+                 cg (g/- c g)
+                 dh (g/- d h)]
+             [(g/+ a ae) (g/+ b bf) (g/+ c cg) (g/+ d dh)
+              (g/+ e ae) (g/+ f bf) (g/+ g cg) (g/+ h dh)])
+        :e (let [da (g/- d a)
+                 cb (g/- c b)
+                 he (g/- h e)
+                 gf (g/- g f)]
+             [(g/+ a da) (g/+ b cb) (g/+ c cb) (g/+ d da)
+              (g/+ e he) (g/+ f gf) (g/+ g gf) (g/+ h he)])
+        :w (let [ad (g/- a d)
+                 bc (g/- b c)
+                 eh (g/- e h)
+                 fg (g/- f g)]
+             [(g/+ a ad) (g/+ b bc) (g/+ c bc) (g/+ d ad)
+              (g/+ e eh) (g/+ f fg) (g/+ g fg) (g/+ h eh)]))
+      node (inc (tree-depth node)))])
+#+END_SRC
+
 *** Scale edge
 
 | *Argument* | *Value description*                                      | *Default*   |
@@ -696,49 +745,57 @@ sides and returns the original node and the mirrored version.
        (map? out) (reduce-kv assoc default out)
        (sequential? out) (vec out)
        :default default)))
-  
+
   (defn subdiv
-    [& {:keys [cols rows slices out empty?] :or {cols 1 rows 1 slices 1}}]
+    [& {:keys [cols rows slices num out empty?] :or {cols 1 rows 1 slices 1}}]
     {:op :sd
-     :args {:cols cols :rows rows :slices slices}
+     :args (if num
+             {:cols num :rows num :slices num}
+             {:cols cols :rows rows :slices slices})
      :out (operator-output (* cols rows slices) out empty?)})
-  
+
   (defn subdiv-inset
     [& {:keys [dir inset out empty?] :or {dir :y inset 0.25}}]
     {:op :sd-inset
      :args {:dir dir :inset inset}
      :out (operator-output 5 out empty?)})
-  
+
   (defn reflect
-    [& {:keys [dir out empty?] :or {dir :n}}]
+    [dir & {:keys [out empty?] :or {dir :n}}]
     {:op :reflect
      :args {:dir dir}
      :out (operator-output 2 out empty?)})
-  
+
+  (defn replicate
+    [dir & {:keys [out empty?]}]
+    {:op :replicate
+     :args {:dir dir}
+     :out (operator-output 2 out empty?)})
+
   (defn extrude
     [& {:keys [dir len out empty?] :or {dir :n len 1.0}}]
     {:op :extrude
      :args {:dir dir :len len}
      :out (operator-output 1 out empty?)})
-  
+
   (defn extrude-prop
     [& {:keys [dir len out empty?] :or {dir :n len 1.0}}]
     {:op :ext-prop
      :args {:dir dir :len len}
      :out (operator-output 1 out empty?)})
-  
+
   (defn scale-edge
     [edge sym & {:keys [scale len out] :or {scale 0.5}}]
     {:op :scale-edge
      :args {:edge edge :sym sym :scale scale :len len}
      :out (operator-output 1 out false)})
-  
+
   (defn skew
     [side ref & {:keys [offset out] :or {offset 0.25}}]
     {:op :skew
      :args {:side side :ref ref :offset offset}
      :out (operator-output 1 out false)})
-  
+
   (defn split-displace
     [dir ref & {:keys [offset out] :or {offset 0.25}}]
     {:op :split-displace2
@@ -756,7 +813,7 @@ sides and returns the original node and the mirrored version.
     reflection."
     [dirs & [leaf]]
     (reduce
-      (fn [t dir] (reflect :dir dir :out [{} t])) (or leaf {})
+      (fn [t dir] (reflect dir :out [{} t])) (or leaf {})
       (reverse dirs)))
 #+END_SRC
 
@@ -773,15 +830,13 @@ as leaves. This way it's also easy to create an animation of the tree
 transformation.
 
 #+BEGIN_SRC clojure :noweb-ref tree-walk
-  (def ^:private kw-out :out)
-  
   (defn- walk*
     [node tree max-depth acc]
     ;;(prn :d (tree-depth node) (:points node) tree)
     (if (< (tree-depth node) max-depth)
       (let [children (operator node tree)]
         (if children
-          (loop [acc acc, children children, out (get tree kw-out)]
+          (loop [acc acc, children children, out (get tree :out)]
             (if (and out children)
               (let [ctree (first out)]
                 (recur
@@ -859,7 +914,7 @@ Next up, the actual implementation of =compute-tree-map=:
     [node tree acc path]
     (let [children (operator node tree)]
       (if children
-        (loop [acc (assoc! acc path node), children children, out (get tree kw-out), i 0]
+        (loop [acc (assoc! acc path node), children children, out (get tree :out), i 0]
           (if (and out children)
             (let [c (first children)
                   ctree (first out)
@@ -1053,6 +1108,7 @@ into a proper Clojure namespace...
 
 #+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/core.cljx :noweb yes :mkdirp yes :padline no
   (ns thi.ng.morphogen.core
+    (:refer-clojure :exclude [replicate])
     ,#+cljs
     (:require-macros
      [thi.ng.macromath.core :as mm])
