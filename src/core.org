@@ -56,6 +56,8 @@ extract points & facets for final mesh assembly:
   (defprotocol PNode
     (parent [_] "Returns the node's parent or `nil` if node is the root")
     (tree-depth [_]  "Returns the node's tree depth")
+    (operator-node [_] "Returns related node from operator tree")
+    (with-operator-node [_ op] "Returns same node with new operator node attached")
     (face-vertices [_ face] "Returns vertices for given face ID")
     (face-topology [_] "Returns number of vertices used for each face in the node"))
 #+END_SRC
@@ -90,7 +92,7 @@ implementation is defining nodes as =defrecord='s, with its =:points=
 field being a vector of the 8 box vertices (in this order: a, b, c .. h).
 
 #+BEGIN_SRC clojure :noweb-ref node
-  (defrecord BoxNode [points parent depth]
+  (defrecord BoxNode [points parent op-node depth]
 #+END_SRC
 
 Of course, the node type must implement the above mentioned protocols
@@ -105,6 +107,8 @@ in order to produce outward facing face normals.
   PNode
   (parent [_] parent)
   (tree-depth [_] depth)
+  (operator-node [_] op-node)
+  (with-operator-node [_ op] (assoc _ :op-node op))
   (face-vertices
    [{[a b c d e f g h] :points} side]
    (case side
@@ -172,7 +176,7 @@ ways:
                   (number? x) (g/vertices (a/aabb x))
                   (sequential? x) (mapv vec3 x)
                   (satisfies? g/PVertexAccess x) (g/vertices x))]
-      (BoxNode. points nil 0)))
+      (BoxNode. points nil nil 0)))
 #+END_SRC
 
 ** Operators
@@ -296,10 +300,10 @@ implementations:
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :sd]
-    [^BoxNode node {:keys [args]}]
+    [^BoxNode node {:keys [args] :as op}]
     (let [depth (inc (tree-depth node))]
       (->> (g/subdivide node args)
-           (mapv #(BoxNode. % node depth)))))
+           (mapv #(BoxNode. % node op depth)))))
   
 #+END_SRC
 
@@ -388,10 +392,10 @@ five child nodes in the specified order:
               [a2 b2 c2 d2 e2 f2 g2 h2]]))))
   
   (defmethod operator [BoxNode :sd-inset]
-    [^BoxNode node {:keys [args]}]
+    [^BoxNode node {:keys [args] :as op}]
     (let [depth (inc (tree-depth node))]
       (->> (subdivide-inset (:points node) args)
-           (mapv #(BoxNode. % node depth)))))
+           (mapv #(BoxNode. % node op depth)))))
   
 #+END_SRC
 
@@ -422,17 +426,17 @@ five child nodes in the specified order:
       (thi.ng.geom.core.vector.Vec3. dest nil nil)))
 
   (defmethod operator [BoxNode :extrude]
-    [^BoxNode node {{:keys [dir len] :or {dir :n len 1.0}} :args}]
+    [^BoxNode node {{:keys [dir len] :or {dir :n len 1.0}} :args :as op}]
     (let [c1 (gu/centroid (face-vertices node dir))
           c2 (gu/centroid (face-vertices node (face-opposite dir)))
           n (g/normalize (g/- c1 c2) len)]
       [(BoxNode.
         (offset-face-points (:points node) dir n)
-        node (inc (tree-depth node)))]))
+        node op (inc (tree-depth node)))]))
 
   (defmethod operator [BoxNode :ext-prop]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [dir len] :or {dir :n len 1.0}} :args}]
+     {{:keys [dir len] :or {dir :n len 1.0}} :args :as op}]
     [(BoxNode.
       (case dir
         :e [a b (offset c b len) (offset d a len)
@@ -448,7 +452,7 @@ five child nodes in the specified order:
         :s [(offset a e len) (offset b f len)
             (offset c g len) (offset d h len)
             e f g h])
-      node (inc (tree-depth node)))])
+      node op (inc (tree-depth node)))])
 #+END_SRC
 
 *** Reflection
@@ -483,7 +487,7 @@ sides and returns the original node and the mirrored version.
 
   (defmethod operator [BoxNode :reflect]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [dir] :or {dir :n}} :args}]
+     {{:keys [dir] :or {dir :n}} :args :as op}]
     [node
      (BoxNode.
       (case dir
@@ -507,7 +511,7 @@ sides and returns the original node and the mirrored version.
         :b (let [n (gu/ortho-normal a e h)]
              [(reflect-on-plane b a n) a d (reflect-on-plane c d n)
               (reflect-on-plane f e n) e h (reflect-on-plane g h n)]))
-      node (inc (tree-depth node)))])
+      node op (inc (tree-depth node)))])
 #+END_SRC
 
 *** Replication
@@ -515,7 +519,7 @@ sides and returns the original node and the mirrored version.
 
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :replicate]
-    [{[a b c d e f g h] :points :as node} {{:keys [dir] :or {dir :n}} :args}]
+    [{[a b c d e f g h] :points :as node} {{:keys [dir] :or {dir :n}} :args :as op}]
     [node
      (BoxNode.
       (case dir
@@ -555,7 +559,7 @@ sides and returns the original node and the mirrored version.
                  fg (g/- f g)]
              [(g/+ a ad) (g/+ b bc) (g/+ c bc) (g/+ d ad)
               (g/+ e eh) (g/+ f fg) (g/+ g fg) (g/+ h eh)]))
-      node (inc (tree-depth node)))])
+      node op (inc (tree-depth node)))])
 #+END_SRC
 
 *** Scale edge
@@ -575,7 +579,7 @@ sides and returns the original node and the mirrored version.
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :scale-edge]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [edge sym scale len] :or {scale 0.5}} :args}]
+     {{:keys [edge sym scale len] :or {scale 0.5}} :args :as op}]
     (let [scale-if (fn [sid p q s]
                      (if (= sid sym)
                        (let [c (g/mix p q)]
@@ -621,7 +625,7 @@ sides and returns the original node and the mirrored version.
                 [a b c d e f g h])
           :dh (let [[d h a e c g] (scale d h :x a e :z c g)]
                 [a b c d e f g h]))
-        node (inc (tree-depth node)))]))
+        node op (inc (tree-depth node)))]))
   
   (defn make-planar
     [a b c d]
@@ -633,7 +637,7 @@ sides and returns the original node and the mirrored version.
   
   (defmethod operator [BoxNode :scale-side]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [side scale] :or {scale 0.5}} :args}]
+     {{:keys [side scale] :or {scale 0.5}} :args :as op}]
     (let [s (* (- 1.0 scale) 0.5)
           [fa fb fc fd] (face-vertices node side)
           [fa fb fc fd] (mapv (fn [[p q]] (g/mix p q s)) [[fa fc] [fb fd] [fc fa] [fd fb]])]
@@ -645,13 +649,15 @@ sides and returns the original node and the mirrored version.
           :s [fa fd fc fb e f g h]
           :f [a fa fb d e fd fc h]
           :b [fb b c fa fc f g fd])
-        node (inc (tree-depth node)))]))
+        node op (inc (tree-depth node)))]))
 #+END_SRC
+
 *** Skew
+
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :skew]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [side ref offset] :or {offset 0.5}} :args}]
+     {{:keys [side ref offset] :or {offset 0.5}} :args :as op}]
     (let [n (if (v/vec3? offset)
               offset
               (g/* (quad-normal (face-vertices node ref)) offset))]
@@ -664,11 +670,11 @@ sides and returns the original node and the mirrored version.
           :s [(g/+ a n) (g/+ b n) (g/+ c n) (g/+ d n) e f g h]
           :f [a (g/+ b n) (g/+ c n) d e (g/+ f n) (g/+ g n) h]
           :b [(g/+ a n) b c (g/+ d n) (g/+ e n) f g (g/+ h n)])
-        node (inc (tree-depth node)))]))
+        node op (inc (tree-depth node)))]))
 
   (defmethod operator [BoxNode :skew2]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [side dir offset] :or {offset 0.5}} :args}]
+     {{:keys [side dir offset] :or {offset 0.5}} :args :as op}]
     (let [[fa fb fc fd] (face-vertices node side)
           skew-vec (if (v/vec3? offset)
                      (constantly offset)
@@ -700,19 +706,22 @@ sides and returns the original node and the mirrored version.
                        :x (skew-vec fd fc fa fb)
                        :y (skew-vec fb fc fa fd))]
                [(g/+ a n) b c (g/+ d n) (g/+ e n) f g (g/+ h n)]))
-        node (inc (tree-depth node)))]))
+        node op (inc (tree-depth node)))]))
 #+END_SRC
 
 *** Split & displace
+
 #+BEGIN_SRC clojure :noweb-ref operators
   (defmethod operator [BoxNode :split-displace]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [dir ref offset] :or {offset 0.5}} :args}]
+     {{:keys [dir ref offset] :or {offset 0.5}} :args :as op}]
     (let [sd-dir ({:x :cols :y :rows :z :slices} dir)
           children (operator node {:op :sd :args {sd-dir 2}})]
       (mapcat
        (fn [c side]
-         (operator c {:op :skew2 :args {:side side :dir ref :offset offset}}))
+         (operator c {:op :skew2
+                      :args {:side side :dir ref :offset offset}
+                      :attribs (:attribs op)}))
        children
        (case dir
          :x [:e :w]
@@ -721,13 +730,15 @@ sides and returns the original node and the mirrored version.
 
   (defmethod operator [BoxNode :split-displace2]
     [{[a b c d e f g h] :points :as node}
-     {{:keys [dir ref offset] :or {offset 0.5}} :args}]
+     {{:keys [dir ref offset] :or {offset 0.5}} :args :as op}]
     (let [sd-dir ({:x :cols :y :rows :z :slices} dir)
           children (operator node {:op :sd :args {sd-dir 2}})
           offset (g/* (quad-normal (face-vertices node ({:x :e :y :n :z :f} ref))) offset)]
       (mapcat
        (fn [c side]
-         (operator c {:op :skew2 :args {:side side :dir ref :offset offset}}))
+         (operator c {:op :skew2
+                      :args {:side side :dir ref :offset offset}
+                      :attribs (:attribs op)}))
        children
        (case dir
          :x [:e :w]
@@ -830,8 +841,8 @@ as leaves. This way it's also easy to create an animation of the tree
 transformation.
 
 #+BEGIN_SRC clojure :noweb-ref tree-walk
-  (defn- walk*
-    [node tree max-depth acc]
+  (defn walk-with
+    [leaf-fn acc node tree max-depth]
     ;;(prn :d (tree-depth node) (:points node) tree)
     (if (< (tree-depth node) max-depth)
       (let [children (operator node tree)]
@@ -840,15 +851,11 @@ transformation.
             (if (and out children)
               (let [ctree (first out)]
                 (recur
-                 (if ctree (walk* (first children) ctree max-depth acc) acc)
+                 (if ctree (walk-with leaf-fn acc (first children) ctree max-depth) acc)
                  (next children) (next out)))
               acc))
-          (conj! acc (g/faces node))))
-      (conj! acc (g/faces node))))
-  
-  (defn walk
-    ([seed tree] (walk seed tree 1e6))
-    ([seed tree max-depth] (persistent! (walk* seed tree max-depth (transient [])))))
+          (leaf-fn acc node)))
+      (leaf-fn acc node)))
 #+END_SRC
 
 *** Caching operator results
@@ -860,11 +867,11 @@ levels of the hierarchy. In this case it might be prohibitive from a
 performance POV to recompute the entire operator tree, if actually
 only the nodes below (and including) the edit point are impacted. The
 =compute-tree-map= function addresses this and is meant as an
-initialization step. It walks the tree in the same way as the =walk=
-function above. However, instead of returning a seq of face lists of
-the resulting meshes of all leaf nodes, this function produces a map
-of *all* computed geometry nodes, each with its path (cursor) into the
-operator tree as key.
+initialization step. It walks the tree in a similar manner as the
+=walk-with= function above. However, instead of returning a seq of face
+lists of the resulting meshes of all leaf nodes, this function
+produces a map of *all* computed geometry nodes, each with its path
+(cursor) into the operator tree as key.
 
 For example using this operator tree:
 
@@ -884,7 +891,7 @@ For example using this operator tree:
    [1]   {:points [...] :depth 1}}
 #+END_SRC
 
-Note, that the map retains geometry nodes also for deleted children.
+*Note, that the map retains geometry nodes also for deleted children.*
 In the example tree, the first child of the =:reflect= operator should
 be removed, however its geometry node is kept in the map for cases
 when a user wants to replace the delete op with another operator later
@@ -940,7 +947,7 @@ use color coding to produce a barcode overview of the operator tree of
 each created object. The functions =operator-seq= and
 =operator-seq-no-leaves= walk the tree in depth-first, pre-order and
 produce a seq of all operator IDs. Empty (deleted, =nil= nodes) and
-leaf nodes (without any operator) will be mapped to =:deleted= &
+leaf nodes (without any operator) will be mapped to =:delete= &
 =:leaf= respectively. =operator-seq-no-leaves= *only* includes nodes
 with actual operators, but no deletions or leaves.
 
@@ -1087,8 +1094,16 @@ with actual operators, but no deletions or leaves.
            (ops/remove-internal))))
 
   (defn generate-mesh
-    ([seed tree] (generate-mesh seed tree 1e6))
-    ([seed tree max-depth] (union-mesh (walk seed tree max-depth))))
+    ([seed tree]
+     (generate-mesh seed tree 1e6))
+    ([seed tree max-depth]
+     (union-mesh
+      (persistent!
+        (walk-with
+         (fn [acc node] (conj! acc (g/faces node)))
+         (transient [])
+         (with-operator-node seed tree)
+         tree max-depth)))))
 
   ,#+clj
   (defn save-mesh
