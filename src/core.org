@@ -759,11 +759,10 @@ sides and returns the original node and the mirrored version.
 
   (defn subdiv
     [& {:keys [cols rows slices num out empty?] :or {cols 1 rows 1 slices 1}}]
-    {:op :sd
-     :args (if num
-             {:cols num :rows num :slices num}
-             {:cols cols :rows rows :slices slices})
-     :out (operator-output (* cols rows slices) out empty?)})
+    (let [[cols rows slices] (if num [num num num] [cols rows slices])]
+      {:op :sd
+       :args {:cols cols :rows rows :slices slices}
+       :out (operator-output (* cols rows slices) out empty?)}))
 
   (defn subdiv-inset
     [& {:keys [dir inset out empty?] :or {dir :y inset 0.25}}]
@@ -841,7 +840,7 @@ as leaves. This way it's also easy to create an animation of the tree
 transformation.
 
 #+BEGIN_SRC clojure :noweb-ref tree-walk
-  (defn walk-with
+  (defn execute-op-tree
     [leaf-fn acc node tree max-depth]
     ;;(prn :d (tree-depth node) (:points node) tree)
     (if (< (tree-depth node) max-depth)
@@ -851,7 +850,7 @@ transformation.
             (if (and out children)
               (let [ctree (first out)]
                 (recur
-                 (if ctree (walk-with leaf-fn acc (first children) ctree max-depth) acc)
+                 (if ctree (execute-op-tree leaf-fn acc (first children) ctree max-depth) acc)
                  (next children) (next out)))
               acc))
           (leaf-fn acc node)))
@@ -937,6 +936,20 @@ Next up, the actual implementation of =compute-tree-map=:
   (defn compute-tree-map
     [seed tree]
     (persistent! (compute-tree-map* seed tree (transient {}) [])))
+#+END_SRC
+
+*** Operator tree walking
+
+#+BEGIN_SRC clojure :noweb-ref tree-walk
+  (defn walk-op-tree
+    [f acc node depth]
+    (let [d (inc depth)]
+      (if-let [children (:out node)]
+        (reduce #(walk-op-tree f % %2 d) acc children)
+        (f acc node depth))))
+
+  (defn op-tree-depth
+    [tree] (walk-op-tree (fn [acc _ d] (max acc d)) 0 tree 0))
 #+END_SRC
 
 *** Operator tree flattening
@@ -1099,7 +1112,7 @@ with actual operators, but no deletions or leaves.
     ([seed tree max-depth]
      (union-mesh
       (persistent!
-        (walk-with
+        (execute-op-tree
          (fn [acc node] (conj! acc (g/faces node)))
          (transient [])
          (with-operator-node seed tree)
