@@ -17,6 +17,12 @@ Declarative 3D form evolution through tree-based transformations. The [video ver
 - [Detailed implementation description](src/core.org)
 - [Examples & rendered results](src/examples.org)
 
+## Leiningen coordinates
+
+```clj
+[thi.ng/morphogen "0.1.0"]
+```
+
 ## License
 
 Copyright © 2014 Karsten Schmidt

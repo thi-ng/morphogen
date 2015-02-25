@@ -52,13 +52,18 @@ small number of operators can already produce a vast number of
 outcomes. The repo contains a [[file:examples.org][file with documented examples]] which can
 be run from the REPL and export meshes in Stanford PLY format.
 
-** License
+* Namespaces
 
-This project is open source and licensed under the [[http://www.apache.org/licenses/LICENSE-2.0][Apache Software License 2.0]].
+- [[./core.org][thi.ng.morphogen.core]]
+- [[./examples.org][examples]]
 
-** Injected properties
+* Tests
+
+* Project definition
+
+** Injected properties                                             :noexport:
 #+BEGIN_SRC clojure :noweb-ref version
-0.1.0-SNAPSHOT
+0.1.0
 #+END_SRC
 #+BEGIN_SRC clojure :exports none :noweb-ref project-url
 https://github.com/thi-ng/morphogen
@@ -81,29 +86,20 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-2657"]
+[org.clojure/clojurescript "0.0-2913"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom-core "0.3.0-SNAPSHOT"]
+[thi.ng/geom-core "0.0-715"]
 #+END_SRC
-**** [[https://github.com/thi-ng/geom][thi.ng/geom-types]]
-#+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom-types "0.3.0-SNAPSHOT"]
-#+END_SRC
-**** [[https://github.com/thi-ng/geom][thi.ng/geom-meshops]]
-#+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom-meshops "0.3.0-SNAPSHOT"]
-#+END_SRC
-
 *** Development
 **** [[https://github.com/thi-ng/luxor][thi.ng/luxor]]
 #+BEGIN_SRC clojure :noweb-ref dep-luxor
-[thi.ng/luxor "0.3.0-SNAPSHOT"]
+[thi.ng/luxor "0.3.0"]
 #+END_SRC
 **** [[https://github.com/lynaghk/cljx][Cljx]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljx
-[com.keminglabs/cljx "0.5.0"]
+[com.keminglabs/cljx "0.6.0"]
 #+END_SRC
 **** [[https://github.com/hugoduncan/criterium][Criterium]]
 #+BEGIN_SRC clojure :noweb-ref dep-criterium
@@ -118,22 +114,9 @@ target/morphogen-<<version>>.js
 [lein-cljsbuild "1.0.4"]
 #+END_SRC
 
-** Contributors
-
-| *Name*          | *Role*                          | *Website*                  |
-|-----------------+---------------------------------+----------------------------|
-| [[k@thi.ng][Karsten Schmidt]] | initiator & principal developer | http://postspectacular.com |
-|                 |                                 | http://thi.ng              |
-
-** Release history
-
-| *Version* | *Released* | *Description*      | *Lein coordinates*           | *Tagged Github URL* |
-|-----------+------------+--------------------+------------------------------+---------------------|
-|     0.1.0 | pending    | 1st public release | =[thi.ng/morphogen "0.1.0"]= |                     |
-
 ** Leiningen coordinates
 #+BEGIN_SRC clojure :noweb yes :noweb-ref lein-coords
-  [thi.ng/morphogen <<version>>]
+  [thi.ng/morphogen "0.1.0"]
 #+END_SRC
 
 ** Building this project
@@ -269,10 +252,19 @@ symbol =version= holding the version string defined above:
   (def version "<<version>>")
 #+END_SRC
 
-* Namespaces
+** Release history
 
-- [[./core.org][thi.ng.morphogen.core]]
-- [[./examples.org][examples]]
+| *Version* | *Released* | *Description*      | *Lein coordinates*           | *Tagged Github URL* |
+|-----------+------------+--------------------+------------------------------+---------------------|
+|     0.1.0 | 2015-02-25 | 1st public release | =[thi.ng/morphogen "0.1.0"]= | [[https://github.com/thi-ng/morphogen/tree/0.1.0][0.1.0]]               |
 
-* Tests
+** Contributors
 
+| *Name*          | *Role*                          | *Website*                  |
+|-----------------+---------------------------------+----------------------------|
+| [[k@thi.ng][Karsten Schmidt]] | initiator & principal developer | http://postspectacular.com |
+|                 |                                 | http://thi.ng              |
+
+** License
+
+This project is open source and licensed under the [[http://www.apache.org/licenses/LICENSE-2.0][Apache Software License 2.0]].
