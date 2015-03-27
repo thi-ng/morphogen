@@ -142,7 +142,7 @@ hemisphere. Just uncomment the last line to see its result.
 
 [[../assets/img/morphogen-ex03-flat.jpg]]
 
-** TODO Hex virus
+** Hex virus
 
 [[../assets/img/morphogen-virus.jpg]]
 
@@ -290,39 +290,4 @@ that the initial seed form/box!
             :cols 2 :out [{} (mg/subdiv-inset :dir :x :inset 0.0055 :out {4 {}} :empty? true)])]))
 
   (mg/save-mesh (mg/seed-box (a/aabb 1 0.2 0.2)) tree)
-#+END_SRC
-** TODO Extrusions & edge scaling
-
-WIP, ignore...
-
-#+BEGIN_SRC clojure :tangle ../babel/examples/ex06.clj :noweb yes :mkdirp yes :padline no
-  (ns ex06
-    <<require-mg>>)
-  
-  (mg/save-mesh
-   (mg/seed-box (a/aabb 1))
-   (mg/scale-edge
-    :ad :z
-    :out [(mg/scale-edge
-           :ab :y :out [(mg/reflect :e :out [{} (mg/reflect :e)])])]))
-#+END_SRC
-** TODO different node types
-
-Sandbox/kitchen sink... ignore :)
-
-#+BEGIN_SRC clojure
-  (defn rot-around-p [p q t] (g/+ q (g/rotate-y (g/- p q) t)))
-
-  (def seed (BoxNode. (mapv g/vec3 [[0.25 0 0] [0 0 1] [1 0 1] [0.75 0 0] [0.35 0.25 0] [0.1 0.25 1] [0.9 0.25 1] [0.65 0.25 0]]) nil 0))
-
-  ;; hex flat
-  (def seed (BoxNode. (mapv vec3 [[-0.5 -0.866025 0] [-0.5 -0.866025 1] [0.5 -0.866025 1] [0.5 -0.866025 0] [-0.375 -0.649519 0] [-0.375 -0.649519 1] [0.375 -0.649519 1] [0.375 -0.649519 0]]) nil 0))
-
-  ;; hex sphere
-  (def seed (BoxNode. (mapv vec3 [[-0.5 -0.866025 0] [-0.38453 -0.666025 0.25] [0.38453 -0.666025 0.25] [0.5 -0.866025 0]
-			       [-0.38453 -0.666025 0.0] [-0.26906 -0.466025 0.25] [0.26906 -0.466025 0.25] [0.38453 -0.666025 0.0]]) nil 0))
-
-  ;; octagon
-  (def seed (BoxNode. (mapv vec3 [[-0.38268 -0.923879 0.0] [-0.34126 -0.823879 0.25] [0.34126 -0.823879 0.25] [0.38268 -0.923879 0.0]
-			       [-0.29984 -0.723879 0.0] [-0.25842 -0.623879 0.25] [0.25842 -0.623879 0.25] [0.29984 -0.723879 0.0]]) nil 0))
 #+END_SRC
