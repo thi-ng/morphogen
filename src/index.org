@@ -63,7 +63,7 @@ be run from the REPL and export meshes in Stanford PLY format.
 
 ** Injected properties                                             :noexport:
 #+BEGIN_SRC clojure :noweb-ref version
-0.1.0
+0.1.1
 #+END_SRC
 #+BEGIN_SRC clojure :exports none :noweb-ref project-url
 https://github.com/thi-ng/morphogen
@@ -86,16 +86,16 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-2913"]
+[org.clojure/clojurescript "0.0-3117"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom-core "0.0-715"]
+[thi.ng/geom "0.0-725"]
 #+END_SRC
 *** Development
 **** [[https://github.com/thi-ng/luxor][thi.ng/luxor]]
 #+BEGIN_SRC clojure :noweb-ref dep-luxor
-[thi.ng/luxor "0.3.0"]
+[thi.ng/luxor "0.3.0" :exclusions [thi.ng/common thi.ng/geom]]
 #+END_SRC
 **** [[https://github.com/lynaghk/cljx][Cljx]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljx
@@ -116,7 +116,7 @@ target/morphogen-<<version>>.js
 
 ** Leiningen coordinates
 #+BEGIN_SRC clojure :noweb yes :noweb-ref lein-coords
-  [thi.ng/morphogen "0.1.0"]
+  [thi.ng/morphogen "0.1.1"]
 #+END_SRC
 
 ** Building this project
@@ -254,9 +254,10 @@ symbol =version= holding the version string defined above:
 
 ** Release history
 
-| *Version* | *Released* | *Description*      | *Lein coordinates*           | *Tagged Github URL* |
-|-----------+------------+--------------------+------------------------------+---------------------|
-|     0.1.0 | 2015-02-25 | 1st public release | =[thi.ng/morphogen "0.1.0"]= | [[https://github.com/thi-ng/morphogen/tree/0.1.0][0.1.0]]               |
+| *Version* | *Released* | *Description*       | *Lein coordinates*           | *Tagged Github URL* |
+|-----------+------------+---------------------+------------------------------+---------------------|
+|     0.1.1 | 2015-02-27 | bugfix dependencies | =[thi.ng/morphogen "0.1.1"]= | [[https://github.com/thi-ng/morphogen/tree/0.1.1][0.1.1]]               |
+|     0.1.0 | 2015-02-25 | 1st public release  | =[thi.ng/morphogen "0.1.0"]= | [[https://github.com/thi-ng/morphogen/tree/0.1.0][0.1.0]]               |
 
 ** Contributors
 
