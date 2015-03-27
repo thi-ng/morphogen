@@ -20,7 +20,7 @@ Declarative 3D form evolution through tree-based transformations. The [video ver
 ## Leiningen coordinates
 
 ```clj
-[thi.ng/morphogen "0.1.0"]
+[thi.ng/morphogen "0.1.1"]
 ```
 
 ## License
