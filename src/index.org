@@ -63,7 +63,7 @@ be run from the REPL and export meshes in Stanford PLY format.
 
 ** Injected properties                                             :noexport:
 #+BEGIN_SRC clojure :noweb-ref version
-0.1.1
+0.2.0-SNAPSHOT
 #+END_SRC
 #+BEGIN_SRC clojure :exports none :noweb-ref project-url
 https://github.com/thi-ng/morphogen
@@ -82,24 +82,20 @@ target/morphogen-<<version>>.js
 *** Runtime
 **** [[https://github.com/clojure/clojure][Clojure]]
 #+BEGIN_SRC clojure :noweb-ref dep-clj
-[org.clojure/clojure "1.6.0"]
+[org.clojure/clojure "1.7.0-RC1"]
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "0.0-3117"]
+[org.clojure/clojurescript "0.0-3297"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom "0.0-725"]
+[thi.ng/geom "0.0.815"]
 #+END_SRC
 *** Development
 **** [[https://github.com/thi-ng/luxor][thi.ng/luxor]]
 #+BEGIN_SRC clojure :noweb-ref dep-luxor
 [thi.ng/luxor "0.3.0" :exclusions [thi.ng/common thi.ng/geom]]
-#+END_SRC
-**** [[https://github.com/lynaghk/cljx][Cljx]]
-#+BEGIN_SRC clojure :noweb-ref dep-cljx
-[com.keminglabs/cljx "0.6.0"]
 #+END_SRC
 **** [[https://github.com/hugoduncan/criterium][Criterium]]
 #+BEGIN_SRC clojure :noweb-ref dep-criterium
@@ -111,21 +107,21 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/emezeske/lein-cljsbuild][Cljsbuild]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljsbuild
-[lein-cljsbuild "1.0.4"]
+[lein-cljsbuild "1.0.6"]
 #+END_SRC
 
 ** Leiningen coordinates
 #+BEGIN_SRC clojure :noweb yes :noweb-ref lein-coords
-  [thi.ng/morphogen "0.1.1"]
+  [thi.ng/morphogen "0.2.0-SNAPSHOT"]
 #+END_SRC
 
 ** Building this project
 
 This project is written in a literate programming format and requires
-[[https://www.gnu.org/software/emacs/][Emacs]] & [[http://orgmode.org][Org-mode]] to generate usable source code in [[https://github.com/lynaghk/cljx][CLJX]] form. Assuming
-both tools are installed, the easiest way to generate a working
-project is via command line (make sure =emacs= is on your path or else
-edit its path in =tangle.sh=):
+[[https://www.gnu.org/software/emacs/][Emacs]] & [[http://orgmode.org][Org-mode]] to generate usable source code. Assuming both tools
+are installed, the easiest way to generate a working project is via
+command line (make sure =emacs= is on your path or else edit its path
+in =tangle.sh=):
 
 #+BEGIN_SRC bash
   git clone https://github.com/thi-ng/morphogen.git
@@ -155,12 +151,11 @@ further experimentation in the browser.
 
 *** Working with the REPL
 
-Since the generated =project.clj= (see below) includes REPL hooks for
-CLJX, editing files in Org-mode, then re-loading & testing changes is
-quite trivial. Simply launch a REPL (via =lein= or Emacs) as usual.
-Everytime you've made changes to an =.org= file, re-tangle it from
-Emacs (=C-c C-v t=) or =tangle.sh=, then reload the namespace in the
-REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
+Editing code blocks or files in Org-mode, then re-loading & testing
+changes is quite trivial. Simply launch a REPL (via =lein= or Emacs)
+as usual. Everytime you've made changes to an =.org= file, re-tangle
+it from Emacs (=C-c C-v t=) or =tangle.sh=, then reload the namespace
+in the REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
 
 ** Leiningen project file                                          :noexport:
 #+BEGIN_SRC clojure :tangle ../babel/project.clj :noweb yes :mkdirp yes :padline no
@@ -178,35 +173,16 @@ REPL via =(require 'thi.ng.morphogen... :reload)= or similar.
     :dependencies [<<dep-clj>>
                    <<dep-geom>>]
 
-    :source-paths ["src/cljx"]
-    :test-paths   ["<<gen-test-path>>"]
-
     :profiles     {:dev {:dependencies [<<dep-luxor>>
                                         <<dep-cljs>>
                                         <<dep-criterium>>]
-                         :plugins [<<dep-cljx>>
-                                   <<dep-cljsbuild>>
+                         :plugins [<<dep-cljsbuild>>
                                    <<dep-cljs-test>>]
                          :global-vars {*warn-on-reflection* true}
                          :jvm-opts ^:replace []
-                         :auto-clean false
-                         :prep-tasks [["cljx" "once"] "javac" "compile"]
-                         :aliases {"cleantest" ["do" "clean," "cljx" "once," "test," "cljsbuild" "test"]}}}
+                         :aliases {"cleantest" ["do" "clean" "test" "cljsbuild" "test"]}}}
 
-    :cljx         {:builds [{:source-paths ["src/cljx"]
-                             :output-path "<<gen-source-path>>"
-                             :rules :clj}
-                            {:source-paths ["src/cljx"]
-                             :output-path "<<gen-source-path>>"
-                             :rules :cljs}
-                            {:source-paths ["test/cljx"]
-                             :output-path "<<gen-test-path>>"
-                             :rules :clj}
-                            {:source-paths ["test/cljx"]
-                             :output-path "<<gen-test-path>>"
-                             :rules :cljs}]}
-
-    :cljsbuild    {:builds [{:source-paths ["<<gen-source-path>>" "<<gen-test-path>>"]
+    :cljsbuild    {:builds [{:source-paths ["src" "test"]
                              :id "simple"
                              :compiler {:output-to "<<cljs-artefact-path>>"
                                         :optimizations :whitespace
@@ -246,7 +222,7 @@ symbol =version= holding the version string defined above:
 
 *** Version namespace                                              :noexport:
 
-#+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/version.cljx :noweb yes :mkdirp yes :padline no :exports none
+#+BEGIN_SRC clojure :tangle ../babel/src/thi/ng/morphogen/version.cljc :noweb yes :mkdirp yes :padline no :exports none
   (ns thi.ng.morphogen.version)
 
   (def version "<<version>>")

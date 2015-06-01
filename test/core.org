@@ -4,24 +4,24 @@
 
 ** Namespace declaration
 
-#+BEGIN_SRC clojure :tangle ../babel/test/cljx/thi/ng/morphogen/test/core.cljx :mkdirp yes :padline no
+#+BEGIN_SRC clojure :tangle ../babel/test/thi/ng/morphogen/test/core.cljc :mkdirp yes :padline no
   (ns thi.ng.morphogen.test.core
-    (:require
-     ,#+clj  [clojure.test :refer :all]
-     ,#+cljs [cemerick.cljs.test :as t])
-    ,#+cljs
-    (:require-macros
-     [cemerick.cljs.test :refer (is deftest with-test testing)]))
+    #?(:cljs
+       (:require-macros
+        [cemerick.cljs.test :refer (is deftest with-test testing)])
+       :clj
+       (:require
+        [clojure.test :refer :all])))
 #+END_SRC
 ** TODO Test constants
 
-#+BEGIN_SRC clojure :tangle ../babel/test/cljx/thi/ng/morphogen/test/core.cljx
+#+BEGIN_SRC clojure :tangle ../babel/test/thi/ng/morphogen/test/core.cljc
   (def meaning 42)
 #+END_SRC
 
 ** TODO Main tests
 
-#+BEGIN_SRC clojure :tangle ../babel/test/cljx/thi/ng/morphogen/test/core.cljx
+#+BEGIN_SRC clojure :tangle ../babel/test/thi/ng/morphogen/test/core.cljc
   (deftest epic-fail
     (is (= 3 (+ 1 1)) "FIXME"))
 #+END_SRC

@@ -419,7 +419,7 @@ five child nodes in the specified order:
           m (/ len (g/mag d))
           ^doubles ba (.-buf a)
           ^doubles bd (.-buf d)
-          ^doubles dest #+clj (double-array 3) #+cljs (js/Float32Array. 3)]
+          ^doubles dest #?(:clj (double-array 3) :cljs (js/Float32Array. 3))]
       (aset dest 0 (double (mm/madd (aget bd 0) m (aget ba 0))))
       (aset dest 1 (double (mm/madd (aget bd 1) m (aget ba 1))))
       (aset dest 2 (double (mm/madd (aget bd 2) m (aget ba 2))))
@@ -479,7 +479,7 @@ sides and returns the original node and the mirrored version.
           ^doubles bn (.-buf n)
           ^doubles br (.-buf r)
           ^doubles bq (.-buf q)
-          ^doubles dest #+clj (double-array 3) #+cljs (js/Float32Array. 3)]
+          ^doubles dest #?(:clj (double-array 3) :cljs (js/Float32Array. 3))]
       (aset dest 0 (double (+ (mm/msub (aget bn 0) d (aget br 0)) (aget bq 0))))
       (aset dest 1 (double (+ (mm/msub (aget bn 1) d (aget br 1)) (aget bq 1))))
       (aset dest 2 (double (+ (mm/msub (aget bn 2) d (aget br 2)) (aget bq 2))))
@@ -1099,12 +1099,12 @@ with actual operators, but no deletions or leaves.
 
   (defn union-mesh
     ([meshes]
-       (union-mesh (bm/basic-mesh) 1e-3 meshes))
+     (union-mesh (bm/basic-mesh) 1e-3 meshes))
     ([target eps meshes]
-       (-> (reduce g/into target meshes)
-           (ops/canonicalize-vertices eps)
-           (first)
-           (ops/remove-internal))))
+     (-> (reduce g/into target meshes)
+         (ops/canonicalize-vertices eps)
+         (first)
+         (ops/remove-internal))))
 
   (defn generate-mesh
     ([seed tree]
@@ -1112,21 +1112,21 @@ with actual operators, but no deletions or leaves.
     ([seed tree max-depth]
      (union-mesh
       (persistent!
-        (execute-op-tree
-         (fn [acc node] (conj! acc (g/faces node)))
-         (transient [])
-         (with-operator-node seed tree)
-         tree max-depth)))))
+       (execute-op-tree
+        (fn [acc node] (conj! acc (g/faces node)))
+        (transient [])
+        (with-operator-node seed tree)
+        tree max-depth)))))
 
-  ,#+clj
-  (defn save-mesh
-    ([seed tree] (save-mesh seed tree "p.ply" 1e6))
-    ([seed tree path] (save-mesh seed tree path 1e6))
-    ([seed tree path max-depth]
-       (with-open [o (io/output-stream path)]
-         (->> (generate-mesh seed tree max-depth)
-              (g/tessellate)
-              (mio/write-ply o)))))
+  #?(:clj
+     (defn save-mesh
+       ([seed tree] (save-mesh seed tree "p.ply" 1e6))
+       ([seed tree path] (save-mesh seed tree path 1e6))
+       ([seed tree path max-depth]
+        (with-open [o (io/output-stream path)]
+          (->> (generate-mesh seed tree max-depth)
+               (g/tessellate)
+               (mio/write-ply o))))))
 #+END_SRC
 
 ** Complete namespace                                              :noexport:
@@ -1134,12 +1134,12 @@ with actual operators, but no deletions or leaves.
 With all elements in place now, we only need to bundle them all up
 into a proper Clojure namespace...
 
-#+BEGIN_SRC clojure :tangle ../babel/src/cljx/thi/ng/morphogen/core.cljx :noweb yes :mkdirp yes :padline no
+#+BEGIN_SRC clojure :tangle ../babel/src/thi/ng/morphogen/core.cljc :noweb yes :mkdirp yes :padline no
   (ns thi.ng.morphogen.core
     (:refer-clojure :exclude [replicate])
-    ,#+cljs
-    (:require-macros
-     [thi.ng.macromath.core :as mm])
+    #?(:cljs
+       (:require-macros
+        [thi.ng.math.macros :as mm]))
     (:require
      [thi.ng.geom.core :as g]
      [thi.ng.geom.core.vector :as v :refer [vec3]]
@@ -1155,11 +1155,11 @@ into a proper Clojure namespace...
      [thi.ng.geom.mesh.ops :as ops]
      [thi.ng.common.data.core :as d]
      [thi.ng.common.math.core :as m :refer [*eps* TWO_PI PI HALF_PI]]
-     ,#+clj [thi.ng.macromath.core :as mm]
-     ,#+clj [thi.ng.geom.mesh.io :as mio]
-     ,#+clj [clojure.java.io :as io]
-     ,#+clj [clojure.pprint :refer [pprint]]
-     ))
+     #?@(:clj
+         [[thi.ng.macromath.core :as mm]
+          [thi.ng.geom.mesh.io :as mio]
+          [clojure.java.io :as io]
+          [clojure.pprint :refer [pprint]]])))
 
   (declare operator child-path)
 
