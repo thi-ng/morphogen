@@ -1126,7 +1126,7 @@ with actual operators, but no deletions or leaves.
         (with-open [o (io/output-stream path)]
           (->> (generate-mesh seed tree max-depth)
                (g/tessellate)
-               (mio/write-ply o))))))
+               (mio/write-ply (mio/wrapped-output-stream o)))))))
 #+END_SRC
 
 ** Complete namespace                                              :noexport:
@@ -1153,10 +1153,10 @@ into a proper Clojure namespace...
      [thi.ng.geom.cuboid :as cu]
      [thi.ng.geom.basicmesh :as bm]
      [thi.ng.geom.mesh.ops :as ops]
-     [thi.ng.common.data.core :as d]
-     [thi.ng.common.math.core :as m :refer [*eps* TWO_PI PI HALF_PI]]
+     [thi.ng.dstruct.core :as d]
+     [thi.ng.math.core :as m :refer [*eps* TWO_PI PI HALF_PI]]
      #?@(:clj
-         [[thi.ng.macromath.core :as mm]
+         [[thi.ng.math.macros :as mm]
           [thi.ng.geom.mesh.io :as mio]
           [clojure.java.io :as io]
           [clojure.pprint :refer [pprint]]])))

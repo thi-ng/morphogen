@@ -88,9 +88,9 @@ target/morphogen-<<version>>.js
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
 [org.clojure/clojurescript "0.0-3297"]
 #+END_SRC
-**** [[https://github.com/thi-ng/geom][thi.ng/geom-core]]
+**** [[https://github.com/thi-ng/geom][thi.ng/geom]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom "0.0.815"]
+[thi.ng/geom "0.0.899"]
 #+END_SRC
 *** Development
 **** [[https://github.com/thi-ng/luxor][thi.ng/luxor]]
