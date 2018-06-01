@@ -8,11 +8,16 @@ REPL, e.g. via =(load-file "examples/ex03.clj")=. Loading the first
 example will take a few seconds, since the thi.ng/geom library is
 quite large, however subsequent calls will take < 1 sec...
 
+#+BEGIN_SRC clojure
+  ;; run all examples
+  (doseq [i (range 1 6)] (load-file (str "examples/ex0" i ".clj")))
+#+END_SRC
+
 (See [[file:index.org][index.org]] for further information how to tangle & build this project)
 
-Each example generates a 3D model in Stanford PLY format, which is
-saved in this file [[../babel/p.ply]] and can then be imported into other
-3d applications. If you need a simple mesh viewer, we recommend
+Each example generates one or more 3D models in binary STL format,
+which are saved in the [[../babel/out/][/out]] directory and can then be imported into
+other 3d applications. If you need a simple mesh viewer, we recommend
 [[http://meshlab.sf.net][Meshlab]].
 
 ** Template for namespace setup
@@ -20,7 +25,7 @@ saved in this file [[../babel/p.ply]] and can then be imported into other
   (:require
    [thi.ng.morphogen.core :as mg]
    [thi.ng.geom.core :as g]
-   [thi.ng.geom.core.vector :as v :refer [vec3]]
+   [thi.ng.geom.vector :as v :refer [vec3]]
    [thi.ng.geom.aabb :as a])
   (:import
    [thi.ng.morphogen.core BoxNode])
@@ -47,7 +52,7 @@ At some point these will be refactored and moved into core ns...
 #+BEGIN_SRC clojure :tangle ../babel/examples/ex01.clj :noweb yes :mkdirp yes :padline no
   (ns ex01
     <<require-mg>>)
-  
+
   (def tree
     (let [branch (fn [[dir lpos]]
                    (mg/subdiv-inset
@@ -62,8 +67,8 @@ At some point these will be refactored and moved into core ns...
              (mg/subdiv
               :rows 3 :out {1 (mg/subdiv :cols 3 :out [nil {} nil])})
              module])))
-  
-  (mg/save-mesh (mg/seed-box (a/aabb 1 0.5 1)) tree)
+
+  (mg/save-stl-mesh (mg/seed-box (a/aabb 1 0.5 1)) tree "out/ex01.stl")
 #+END_SRC
 
 ** Stripy module (heatsink?)
@@ -99,7 +104,7 @@ At some point these will be refactored and moved into core ns...
           so (mg/subdiv :rows 2 :out [(stripes* odd? 9)])]
       (mg/subdiv :cols 3 :slices 3 :out [se so se se nil se se so se])))
 
-  (mg/save-mesh (mg/seed-box (a/aabb 1 0.2 1)) tree)
+  (mg/save-stl-mesh (mg/seed-box (a/aabb 1 0.2 1)) tree "out/ex02.stl")
 #+END_SRC
 
 ** Hexagon hemisphere
@@ -130,10 +135,10 @@ various repetitive sub-transformations using simple functions.
       (mg/reflect :s :out [(inject seed-clone) (inject reflected-hex)])))
 
   ;; apply to sphere lattice segment to form hemisphere
-  (mg/save-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t)
+  (mg/save-stl-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) t "out/ex03.stl")
 
   ;; apply to circle lattice segment to form flat structure
-  ;;(mg/save-mesh (mg/seed-box (mg/circle-lattice-seg 6 0.25 0.2)) t)
+  (mg/save-stl-mesh (mg/seed-box (mg/circle-lattice-seg 6 0.25 0.2)) t "out/ex03-alt.stl")
 #+END_SRC
 
 The example also includes a variation of the same tree applied to a
@@ -162,7 +167,7 @@ that the initial seed form/box!
      [thi.ng.geom.aabb :as a])
     (:import
      [thi.ng.morphogen.core BoxNode]))
-  
+
   (defn hollow-out
     "Returns a tree which applies the `subdiv-inset` operator to a form
     in the given direction and removes the center child or optionally
@@ -173,7 +178,7 @@ that the initial seed form/box!
        (hollow-out dir inset false {4 nil}))
     ([dir inset empty? out]
        (mg/subdiv-inset :dir dir :inset inset :out out :empty? empty?)))
-  
+
   (defn antenna-ring
     "Returns tree which extrudes form in given direction (east/west),
     splits it into 3 columns, scales side edges of last to half length
@@ -191,12 +196,12 @@ that the initial seed form/box!
            :cols 3
            :out
            {ring-child-id (mg/scale-edge edge2 :z :out [ring])})])])))
-  
+
   (def antenna-rings
     "The two east/west facing ring modules attached to the tip of the antenna."
     [(antenna-ring :w :ab :bf 0 13)
      (antenna-ring :e :cd :cg 2 13)])
-  
+
   (def antenna-tip
     "The last (thinnest) two antenna segments with rings attached to the lower one."
     (mg/subdiv
@@ -209,7 +214,7 @@ that the initial seed form/box!
                        :out {0 (hollow-out :z 0.01 false {4 (mg/extrude :dir :b :len 1)})
                              1 (mg/subdiv :cols 2 :out antenna-rings)})])
            nil]))
-  
+
   (def antenna-main
     "Main antenna parts without base ."
     (hollow-out
@@ -217,7 +222,7 @@ that the initial seed form/box!
      {4 (mg/extrude
          :dir :b :len 0.25
          :out [(hollow-out :z 0.025 false {4 antenna-tip})])}))
-  
+
   (defn antenna-module
     "Complete antenna module with configurable base."
     [inset]
@@ -226,7 +231,7 @@ that the initial seed form/box!
      :out [(hollow-out
             :z inset false
             {4 (mg/subdiv :slices 2 :out {0 antenna-main})})]))
-  
+
   (def tree
     "Main tree. First forms arrangement of 10 hexagons using seed form &
     sequence of nested reflections. Then applies skeletonization and
@@ -252,9 +257,9 @@ that the initial seed form/box!
                      (hollow-out :x inset)])]
       (->> (mg/reflect :s :out [(inject seed-clone) (inject refl-hex)])
            (mg/map-leaves (constantly skeleton)))))
-  
+
   ;; apply to sphere lattice segment to form hemisphere
-  (mg/save-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree)
+  (mg/save-stl-mesh (mg/seed-box (mg/sphere-lattice-seg 6 0.25 0.0955 0.2)) tree "out/ex04.stl")
 #+END_SRC
 
 ** MIT Selfassembly module
@@ -289,5 +294,5 @@ that the initial seed form/box!
            (mg/subdiv
             :cols 2 :out [{} (mg/subdiv-inset :dir :x :inset 0.0055 :out {4 {}} :empty? true)])]))
 
-  (mg/save-mesh (mg/seed-box (a/aabb 1 0.2 0.2)) tree)
+  (mg/save-stl-mesh (mg/seed-box (a/aabb 1 0.2 0.2)) tree "out/ex05.stl")
 #+END_SRC

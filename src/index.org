@@ -82,15 +82,15 @@ target/morphogen-<<version>>.js
 *** Runtime
 **** [[https://github.com/clojure/clojure][Clojure]]
 #+BEGIN_SRC clojure :noweb-ref dep-clj
-[org.clojure/clojure "1.7.0"]
+[org.clojure/clojure "1.9.0"]
 #+END_SRC
 **** [[https://github.com/clojure/clojurescript][ClojureScript]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljs
-[org.clojure/clojurescript "1.7.170"]
+[org.clojure/clojurescript "1.10.238"]
 #+END_SRC
 **** [[https://github.com/thi-ng/geom][thi.ng/geom]]
 #+BEGIN_SRC clojure :noweb-ref dep-geom
-[thi.ng/geom "0.0.908"]
+[thi.ng/geom "1.0.0-RC3"]
 #+END_SRC
 *** Development
 **** [[https://github.com/thi-ng/luxor][thi.ng/luxor]]
@@ -107,7 +107,7 @@ target/morphogen-<<version>>.js
 #+END_SRC
 **** [[https://github.com/emezeske/lein-cljsbuild][Cljsbuild]]
 #+BEGIN_SRC clojure :noweb-ref dep-cljsbuild
-[lein-cljsbuild "1.0.6"]
+[lein-cljsbuild "1.1.7"]
 #+END_SRC
 
 ** Leiningen coordinates
@@ -132,7 +132,7 @@ in =tangle.sh=):
 Tangling is the process of extracting & combining source blocks from
 =.org= files into an actual working project/source tree. Once tangling
 is complete, you can =cd= into the generated project directory
-(=babel=) and then use =lein= as usual.
+(=babel=) and then use =lein repl= as usual.
 
 *** Testing
 
